@@ -53,6 +53,9 @@ jobs:
       uses: actions/upload-pages-artifact@v3
       with:
         path: ./dist
+        
+    - name: 设置 GitHub Pages
+      uses: actions/configure-pages@v4
 
   # 部署工作
   deploy:

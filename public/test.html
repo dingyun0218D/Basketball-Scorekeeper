@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试页面 - 篮球计分器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #28a745;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .link {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .link:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success">✅ GitHub Pages 部署成功！</div>
+        
+        <h2>🏀 篮球计分器测试页面</h2>
+        
+        <div class="info">
+            <strong>当前信息：</strong><br>
+            URL: <span id="url"></span><br>
+            路径: <span id="path"></span><br>
+            时间: <span id="time"></span>
+        </div>
+        
+        <p>如果你能看到这个页面，说明 GitHub Pages 部署正常工作。</p>
+        
+        <a href="./index.html" class="link">进入篮球计分器应用</a>
+        
+        <script>
+            document.getElementById('url').textContent = window.location.href;
+            document.getElementById('path').textContent = window.location.pathname;
+            document.getElementById('time').textContent = new Date().toLocaleString('zh-CN');
+        </script>
+    </div>
+</body>
+</html> 
