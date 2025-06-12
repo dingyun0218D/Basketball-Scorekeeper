@@ -30,18 +30,24 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
+        
+    - name: 删除 package-lock.json 避免版本冲突
+      run: rm -f package-lock.json
         
     - name: 安装依赖
-      run: npm ci
-      
+      run: |
+        npm install
+        npm install @rollup/rollup-linux-x64-gnu --save-optional || true
+        
     - name: 运行代码检查
       run: npm run lint
       
     - name: 构建项目
-      run: npm run build
+      run: |
+        npm run build || npm run build:ci
       env:
         NODE_ENV: production
+        ROLLUP_USE_NODE: true
         
     - name: 上传构建产物
       uses: actions/upload-pages-artifact@v3
