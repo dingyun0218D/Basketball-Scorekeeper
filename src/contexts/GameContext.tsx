@@ -46,7 +46,7 @@ const initialGameState: GameState = {
 // Game reducer
 const gameReducer = (state: GameState, action: GameAction): GameState => {
   switch (action.type) {
-    case 'LOAD_GAME':
+    case 'LOAD_GAME': {
       // 验证加载的数据格式
       const loadedState = action.payload;
       
@@ -65,6 +65,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       
       console.log('GameContext: 加载验证后的游戏状态', validatedState);
       return validatedState;
+    }
 
     case 'LOAD_ARCHIVE':
       return {
@@ -88,7 +89,9 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       const team = isHomeTeam ? state.homeTeam : state.awayTeam;
       const oppositeTeam = isHomeTeam ? state.awayTeam : state.homeTeam;
       
+      // eslint-disable-next-line prefer-const
       let updatedTeam = { ...team, score: Math.max(0, team.score + points) };
+      // eslint-disable-next-line prefer-const
       let updatedOppositeTeam = { ...oppositeTeam };
       
       // 更新在场球员的正负值
@@ -183,7 +186,9 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       
       if (!canUndo) return state;
       
+      // eslint-disable-next-line prefer-const
       let updatedTeam = { ...team, score: Math.max(0, team.score - points) };
+      // eslint-disable-next-line prefer-const
       let updatedOppositeTeam = { ...oppositeTeam };
       
       // 撤销在场球员的正负值
@@ -319,6 +324,7 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       const isHomeTeam = teamId === state.homeTeam.id;
       const team = isHomeTeam ? state.homeTeam : state.awayTeam;
       
+      // eslint-disable-next-line prefer-const
       let updatedTeam = { ...team, fouls: team.fouls + 1 };
       
       if (playerId) {

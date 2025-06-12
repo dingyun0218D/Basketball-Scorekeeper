@@ -7,6 +7,7 @@ import { ConfirmModal } from './components/common/ConfirmModal';
 import { useGame } from './contexts/GameContext';
 import { useGameTimer } from './hooks/useGameTimer';
 import { createDefaultPlayer, validatePlayerNumber } from './utils/gameUtils';
+import { Player } from './types';
 import './index.css';
 
 // Tab类型
@@ -19,7 +20,7 @@ const App: React.FC = () => {
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [playerToDelete, setPlayerToDelete] = useState<{teamId: string; playerId: string; playerInfo: any} | null>(null);
+  const [playerToDelete, setPlayerToDelete] = useState<{teamId: string; playerId: string; playerInfo: Player} | null>(null);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
 
   // 处理得分更新

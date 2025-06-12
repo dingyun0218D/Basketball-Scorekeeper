@@ -7,8 +7,8 @@ interface StatisticsAnalysisProps {
   onScoreUpdate: (teamId: string, points: number, playerId?: string) => void;
   onPlayerStatUpdate: (teamId: string, playerId: string, stat: string, value: number) => void;
   onAddFoul: (teamId: string, playerId: string) => void;
-  onShotAttempt?: (teamId: string, playerId: string, shotType: 'field' | 'three' | 'free') => void;
-  onUndoScore?: (teamId: string, playerId: string, scoreType: '1' | '2' | '3') => void;
+  onShotAttempt: (teamId: string, playerId: string, shotType: 'field' | 'three' | 'free') => void;
+  onUndoScore: (teamId: string, playerId: string, scoreType: '1' | '2' | '3') => void;
   onRemovePlayer: (teamId: string, playerId: string) => void;
   onAddPlayer: (teamId: string) => void;
 }
@@ -18,10 +18,15 @@ type ViewMode = 'overview' | 'players';
 export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
   homeTeam,
   awayTeam,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onScoreUpdate,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onPlayerStatUpdate,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onAddFoul,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onShotAttempt,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onUndoScore,
   onRemovePlayer,
   onAddPlayer

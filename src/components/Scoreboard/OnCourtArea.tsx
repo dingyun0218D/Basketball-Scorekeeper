@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Player, Team } from '../../types';
+import { Team } from '../../types';
 
 interface OnCourtAreaProps {
   team: Team;

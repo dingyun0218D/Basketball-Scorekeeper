@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Team, Player } from '../../types';
+import { Team } from '../../types';
 import { TeamStats } from './TeamStats';
 import { DetailedPlayerCard } from './DetailedPlayerCard';
 

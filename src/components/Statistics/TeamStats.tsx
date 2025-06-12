@@ -10,8 +10,6 @@ export const TeamStats: React.FC<TeamStatsProps> = ({ team }) => {
   const totalPoints = team.players.reduce((sum, player) => sum + player.points, 0);
   const totalRebounds = team.players.reduce((sum, player) => sum + player.rebounds, 0);
   const totalAssists = team.players.reduce((sum, player) => sum + player.assists, 0);
-  const totalSteals = team.players.reduce((sum, player) => sum + player.steals, 0);
-  const totalBlocks = team.players.reduce((sum, player) => sum + player.blocks, 0);
   const totalFouls = team.players.reduce((sum, player) => sum + player.fouls, 0);
   
   const totalFieldGoalAttempts = team.players.reduce((sum, player) => sum + player.fieldGoalsAttempted, 0);

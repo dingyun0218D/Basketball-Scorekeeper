@@ -1,4 +1,4 @@
-import { Player, Team, GameState, GameStats } from '../types';
+import { Player, Team, GameStats } from '../types';
 
 // 生成唯一ID
 export const generateId = (): string => {

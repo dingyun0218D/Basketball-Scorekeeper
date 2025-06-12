@@ -13,6 +13,7 @@ export const TimeSettings: React.FC<TimeSettingsProps> = ({
   currentTime,
   quarterTime,
   isRunning,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onTimeChange,
   onQuarterTimeChange
 }) => {
