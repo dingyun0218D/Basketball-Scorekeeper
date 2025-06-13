@@ -1,7 +1,7 @@
-import React, { createContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext } from 'react';
 import { GameState, Team, Player, GameEvent, ScoreType } from '../types';
 import { generateId, createDefaultTeam } from '../utils/gameUtils';
-import { saveCurrentGame, loadCurrentGame, clearCurrentGame } from '../utils/storage';
+import { clearCurrentGame } from '../utils/storage';
 
 // Action types
 type GameAction =
@@ -29,7 +29,7 @@ type GameAction =
   | { type: 'RESET_GAME' };
 
 // Initial state
-const initialGameState: GameState = {
+export const initialGameState: GameState = {
   id: generateId(),
   homeTeam: createDefaultTeam('主队', '#1E40AF'),
   awayTeam: createDefaultTeam('客队', '#DC2626'),
@@ -44,7 +44,7 @@ const initialGameState: GameState = {
 };
 
 // Game reducer
-const gameReducer = (state: GameState, action: GameAction): GameState => {
+export const gameReducer = (state: GameState, action: GameAction): GameState => {
   switch (action.type) {
     case 'LOAD_GAME': {
       // 验证加载的数据格式
@@ -560,50 +560,6 @@ interface GameContextType {
 
 export const GameContext = createContext<GameContextType | undefined>(undefined);
 
-// Provider
-interface GameProviderProps {
-  children: ReactNode;
-}
-
-export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
-  const [gameState, dispatch] = useReducer(gameReducer, initialGameState);
-
-  // 加载保存的游戏状态
-  useEffect(() => {
-    console.log('GameProvider: 尝试加载保存的游戏状态');
-    const savedGame = loadCurrentGame();
-    if (savedGame) {
-      console.log('GameProvider: 加载已保存的游戏状态', savedGame);
-      dispatch({ type: 'LOAD_GAME', payload: savedGame });
-    } else {
-      console.log('GameProvider: 没有找到保存的游戏状态，使用初始状态');
-    }
-  }, []);
-
-  // 调试输出当前状态
-  useEffect(() => {
-    console.log('GameProvider: 游戏状态更新', {
-      hasHomeTeam: !!gameState?.homeTeam,
-      hasAwayTeam: !!gameState?.awayTeam,
-      homeTeamName: gameState?.homeTeam?.name,
-      awayTeamName: gameState?.awayTeam?.name,
-      quarter: gameState?.quarter,
-      time: gameState?.time
-    });
-  }, [gameState]);
-
-  // 自动保存游戏状态
-  useEffect(() => {
-    if (gameState.id !== initialGameState.id) {
-      saveCurrentGame(gameState);
-    }
-  }, [gameState]);
-
-  return (
-    <GameContext.Provider value={{ gameState, dispatch }}>
-      {children}
-    </GameContext.Provider>
-  );
-};
+// Provider is now in separate file to fix React Fast Refresh warning
 
 // Hook is now in separate file to fix React Fast Refresh warning 

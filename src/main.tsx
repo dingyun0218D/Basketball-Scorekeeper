@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
-import { GameProvider } from './contexts/GameContext'
+import { GameProvider } from './contexts/GameContextProvider'
 import { ErrorBoundary } from './components/common/ErrorBoundary'
 import './index.css'
 
