@@ -3,6 +3,7 @@ import { ScoreboardPlayerSection } from './components/Scoreboard';
 import { TimerControls } from './components/GameControls';
 import { StatisticsAnalysis } from './components/Statistics';
 import { GameHistory } from './components/History/GameHistory';
+import { TeamNameEditor } from './components/Team/TeamNameEditor';
 import { ConfirmModal } from './components/common/ConfirmModal';
 import { useGame } from './contexts/GameContext';
 import { useGameTimer } from './hooks/useGameTimer';
@@ -135,6 +136,14 @@ const App: React.FC = () => {
   // 取消重置比赛
   const cancelResetGame = () => {
     setShowResetConfirmModal(false);
+  };
+
+  // 处理队名更新
+  const handleTeamNameUpdate = (teamId: string, newName: string) => {
+    dispatch({
+      type: 'UPDATE_TEAM',
+      payload: { teamId, updates: { name: newName } }
+    });
   };
 
   // 添加球员模态框组件
@@ -272,7 +281,11 @@ const App: React.FC = () => {
               <div className="grid grid-cols-3 gap-8 items-center">
                 {/* 主队得分 */}
                 <div className="text-center">
-                  <div className="text-lg opacity-90 font-medium">{gameState.homeTeam.name}</div>
+                  <TeamNameEditor 
+                    team={gameState.homeTeam}
+                    onTeamNameUpdate={handleTeamNameUpdate}
+                    side="home"
+                  />
                   <div className="text-5xl font-bold my-2">{gameState.homeTeam.score}</div>
                   <div className="text-sm opacity-75">犯规:{gameState.homeTeam.fouls} 暂停:{gameState.homeTeam.timeouts}</div>
                 </div>
@@ -296,7 +309,11 @@ const App: React.FC = () => {
 
                 {/* 客队得分 */}
                 <div className="text-center">
-                  <div className="text-lg opacity-90 font-medium">{gameState.awayTeam.name}</div>
+                  <TeamNameEditor 
+                    team={gameState.awayTeam}
+                    onTeamNameUpdate={handleTeamNameUpdate}
+                    side="away"
+                  />
                   <div className="text-5xl font-bold my-2">{gameState.awayTeam.score}</div>
                   <div className="text-xs opacity-75">犯规:{gameState.awayTeam.fouls} 暂停:{gameState.awayTeam.timeouts}</div>
                 </div>
@@ -325,8 +342,7 @@ const App: React.FC = () => {
       case 'players-stats':
         return (
           <StatisticsAnalysis
-            homeTeam={gameState.homeTeam}
-            awayTeam={gameState.awayTeam}
+            gameState={gameState}
             onScoreUpdate={handleScoreUpdate}
             onPlayerStatUpdate={handlePlayerStatUpdate}
             onAddFoul={handleAddFoul}

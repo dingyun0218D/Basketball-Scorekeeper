@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Team, Player } from '../../types';
+import { Team, Player, GameState } from '../../types';
+import { GameEventsLog } from './GameEventsLog';
 
 interface StatisticsAnalysisProps {
-  homeTeam: Team;
-  awayTeam: Team;
+  gameState: GameState;
   onScoreUpdate: (teamId: string, points: number, playerId?: string) => void;
   onPlayerStatUpdate: (teamId: string, playerId: string, stat: string, value: number) => void;
   onAddFoul: (teamId: string, playerId: string) => void;
@@ -13,11 +13,10 @@ interface StatisticsAnalysisProps {
   onAddPlayer: (teamId: string) => void;
 }
 
-type ViewMode = 'overview' | 'players';
+type ViewMode = 'overview' | 'players' | 'events';
 
 export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
-  homeTeam,
-  awayTeam,
+  gameState,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onScoreUpdate,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -32,6 +31,8 @@ export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
   onAddPlayer
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
+  
+  const { homeTeam, awayTeam } = gameState;
 
   // 计算球队整体统计
   const calculateTeamStats = (team: Team) => {
@@ -45,6 +46,7 @@ export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
       acc.totalSteals += player.steals;
       acc.totalBlocks += player.blocks;
       acc.totalFouls += player.fouls;
+      acc.totalTurnovers += player.turnovers;
       acc.freeThrowsMade += player.freeThrowsMade;
       acc.freeThrowsAttempted += player.freeThrowsAttempted;
       acc.fieldGoalsMade += player.fieldGoalsMade;
@@ -63,6 +65,7 @@ export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
       totalSteals: 0,
       totalBlocks: 0,
       totalFouls: 0,
+      totalTurnovers: 0,
       freeThrowsMade: 0,
       freeThrowsAttempted: 0,
       fieldGoalsMade: 0,
@@ -102,8 +105,7 @@ export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
     const positiveStats = player.points + player.rebounds + player.assists + player.steals + player.blocks;
     const fieldGoalMisses = player.fieldGoalsAttempted - player.fieldGoalsMade;
     const freeThrowMisses = player.freeThrowsAttempted - player.freeThrowsMade;
-    // 注意：由于我们的数据结构中没有失误(turnovers)，暂时使用犯规作为负面指标
-    const negativeStats = player.fouls + fieldGoalMisses + freeThrowMisses;
+    const negativeStats = player.turnovers + player.fouls + fieldGoalMisses + freeThrowMisses;
     
     return positiveStats - negativeStats;
   };
@@ -268,6 +270,10 @@ export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
                     <div className="text-xs text-gray-600">盖帽</div>
                   </div>
                   <div className="bg-gray-50 p-2 rounded text-center">
+                    <div className="font-bold text-red-600">{homeStats.totalTurnovers}</div>
+                    <div className="text-xs text-gray-600">失误</div>
+                  </div>
+                  <div className="bg-gray-50 p-2 rounded text-center">
                     <div className={`font-bold ${homeStats.totalFouls >= 20 ? 'text-red-600' : 'text-yellow-600'}`}>{homeStats.totalFouls}</div>
                     <div className="text-xs text-gray-600">犯规</div>
                   </div>
@@ -346,6 +352,10 @@ export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
                     <div className="text-xs text-gray-600">盖帽</div>
                   </div>
                   <div className="bg-gray-50 p-2 rounded text-center">
+                    <div className="font-bold text-red-600">{awayStats.totalTurnovers}</div>
+                    <div className="text-xs text-gray-600">失误</div>
+                  </div>
+                  <div className="bg-gray-50 p-2 rounded text-center">
                     <div className={`font-bold ${awayStats.totalFouls >= 20 ? 'text-red-600' : 'text-yellow-600'}`}>{awayStats.totalFouls}</div>
                     <div className="text-xs text-gray-600">犯规</div>
                   </div>
@@ -399,6 +409,7 @@ export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
                   <th className="text-center p-3 font-medium text-gray-600">助攻</th>
                   <th className="text-center p-3 font-medium text-gray-600">抢断</th>
                   <th className="text-center p-3 font-medium text-gray-600">盖帽</th>
+                  <th className="text-center p-3 font-medium text-gray-600">失误</th>
                   <th className="text-center p-3 font-medium text-gray-600">犯规</th>
                   <th className="text-center p-3 font-medium text-gray-600">投篮%</th>
                   <th className="text-center p-3 font-medium text-gray-600">真实%</th>
@@ -438,6 +449,11 @@ export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
                       <td className="text-center p-3">{player.assists}</td>
                       <td className="text-center p-3">{player.steals}</td>
                       <td className="text-center p-3">{player.blocks}</td>
+                      <td className="text-center p-3">
+                        <span className={player.turnovers >= 5 ? 'text-red-600 font-bold' : ''}>
+                          {player.turnovers}
+                        </span>
+                      </td>
                       <td className="text-center p-3">
                         <span className={player.fouls >= 5 ? 'text-red-600 font-bold' : ''}>
                           {player.fouls}
@@ -525,6 +541,11 @@ export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
     );
   };
 
+  // 渲染事件记录
+  const renderEvents = () => {
+    return <GameEventsLog gameState={gameState} />;
+  };
+
   return (
     <div className="space-y-6">
       {/* 视图切换 */}
@@ -550,11 +571,23 @@ export const StatisticsAnalysis: React.FC<StatisticsAnalysisProps> = ({
           >
             球员统计
           </button>
+          <button
+            onClick={() => setViewMode('events')}
+            className={`px-6 py-2 rounded font-medium transition-colors ${
+              viewMode === 'events'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            比赛记录
+          </button>
         </div>
       </div>
 
       {/* 渲染对应内容 */}
-      {viewMode === 'overview' ? renderOverview() : renderPlayerStats()}
+      {viewMode === 'overview' && renderOverview()}
+      {viewMode === 'players' && renderPlayerStats()}
+      {viewMode === 'events' && renderEvents()}
     </div>
   );
 }; 

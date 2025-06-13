@@ -448,7 +448,13 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
       return { ...state, isRunning: true, isPaused: false };
 
     case 'STOP_TIMER':
-      return { ...state, isRunning: false, isPaused: false };
+      return { 
+        ...state, 
+        isRunning: false, 
+        isPaused: false,
+        time: state.quarterTime, // 重置时间到设置的每节时长
+        updatedAt: Date.now()
+      };
 
     case 'UPDATE_TIME':
       return { ...state, time: action.payload.time, updatedAt: Date.now() };

@@ -54,6 +54,7 @@ export const createDefaultPlayer = (name: string, number: number, position: stri
   steals: 0,
   blocks: 0,
   fouls: 0,
+  turnovers: 0, // 失误初始化为0
   fieldGoalsMade: 0,
   fieldGoalsAttempted: 0,
   threePointersMade: 0,

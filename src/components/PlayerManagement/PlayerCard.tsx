@@ -81,6 +81,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         <StatButton label="助攻" value={player.assists} statKey="assists" />
         <StatButton label="抢断" value={player.steals} statKey="steals" />
         <StatButton label="盖帽" value={player.blocks} statKey="blocks" />
+        <StatButton label="失误" value={player.turnovers} statKey="turnovers" />
         
         {/* 投篮统计 */}
         <div className="border-t pt-2 mt-2">

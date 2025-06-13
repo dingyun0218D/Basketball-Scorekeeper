@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { GameState, GameArchive } from '../../types';
 import { useGame } from '../../contexts/GameContext';
+import { ArchiveViewer } from './ArchiveViewer';
+import { DeleteArchiveConfirm } from './DeleteArchiveConfirm';
 import { 
   saveGameArchive, 
   getGameArchives, 
@@ -20,6 +22,9 @@ export const GameHistory: React.FC<GameHistoryProps> = ({ currentGame }) => {
   const [historyGames] = useState(getGameHistory());
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveGameName, setSaveGameName] = useState('');
+  const [viewingArchive, setViewingArchive] = useState<{gameState: GameState; name: string} | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [archiveToDelete, setArchiveToDelete] = useState<GameArchive | null>(null);
 
   // 刷新存档列表
   const refreshArchives = () => {
@@ -65,11 +70,37 @@ export const GameHistory: React.FC<GameHistoryProps> = ({ currentGame }) => {
   };
 
   // 删除存档
-  const handleDeleteArchive = (archiveId: string, archiveName: string) => {
-    if (confirm(`确定要删除存档"${archiveName}"吗？此操作不可恢复。`)) {
-      deleteGameArchive(archiveId);
+  const handleDeleteArchive = (archiveId: string) => {
+    const archive = archives.find(a => a.id === archiveId);
+    if (archive) {
+      setArchiveToDelete(archive);
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  // 确认删除存档
+  const confirmDeleteArchive = () => {
+    if (archiveToDelete) {
+      deleteGameArchive(archiveToDelete.id);
       refreshArchives();
-      alert('存档已删除');
+      setShowDeleteConfirm(false);
+      setArchiveToDelete(null);
+    }
+  };
+
+  // 取消删除存档
+  const cancelDeleteArchive = () => {
+    setShowDeleteConfirm(false);
+    setArchiveToDelete(null);
+  };
+
+  // 查看存档
+  const handleViewArchive = (archiveId: string, archiveName: string) => {
+    const gameState = loadGameArchive(archiveId);
+    if (gameState) {
+      setViewingArchive({ gameState, name: archiveName });
+    } else {
+      alert('加载存档失败');
     }
   };
 
@@ -84,6 +115,23 @@ export const GameHistory: React.FC<GameHistoryProps> = ({ currentGame }) => {
 
   return (
     <div className="space-y-6">
+      {/* 存档查看器 */}
+      {viewingArchive && (
+        <ArchiveViewer
+          gameState={viewingArchive.gameState}
+          archiveName={viewingArchive.name}
+          onClose={() => setViewingArchive(null)}
+        />
+      )}
+
+      {/* 删除确认对话框 */}
+      <DeleteArchiveConfirm
+        archive={archiveToDelete}
+        isOpen={showDeleteConfirm}
+        onConfirm={confirmDeleteArchive}
+        onCancel={cancelDeleteArchive}
+      />
+
       {/* 保存对话框 */}
       {showSaveDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -227,16 +275,28 @@ export const GameHistory: React.FC<GameHistoryProps> = ({ currentGame }) => {
                       
                       <div className="flex space-x-2 ml-4">
                         <button
-                          onClick={() => handleLoadArchive(archive.id)}
-                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-sm font-medium flex items-center space-x-1"
+                          onClick={() => handleViewArchive(archive.id, archive.name || '')}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium flex items-center space-x-1"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
-                          <span>继续比赛</span>
+                          <span>查看</span>
                         </button>
+                        {!isCompleted && (
+                          <button
+                            onClick={() => handleLoadArchive(archive.id)}
+                            className="bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded text-sm font-medium flex items-center space-x-1"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>继续比赛</span>
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleDeleteArchive(archive.id, archive.name || '')}
+                          onClick={() => handleDeleteArchive(archive.id)}
                           className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm font-medium"
                         >
                           删除

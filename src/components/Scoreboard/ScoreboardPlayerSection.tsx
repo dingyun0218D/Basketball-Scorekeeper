@@ -37,10 +37,20 @@ export const ScoreboardPlayerSection: React.FC<ScoreboardPlayerSectionProps> = (
         <OnCourtArea
           team={homeTeam}
           onTogglePlayerStatus={(playerId) => onTogglePlayerCourtStatus(homeTeam.id, playerId)}
+          onScoreUpdate={onScoreUpdate}
+          onPlayerStatUpdate={onPlayerStatUpdate}
+          onAddFoul={onAddFoul}
+          onShotAttempt={onShotAttempt}
+          onUndoScore={onUndoScore}
         />
         <OnCourtArea
           team={awayTeam}
           onTogglePlayerStatus={(playerId) => onTogglePlayerCourtStatus(awayTeam.id, playerId)}
+          onScoreUpdate={onScoreUpdate}
+          onPlayerStatUpdate={onPlayerStatUpdate}
+          onAddFoul={onAddFoul}
+          onShotAttempt={onShotAttempt}
+          onUndoScore={onUndoScore}
         />
       </div>
 

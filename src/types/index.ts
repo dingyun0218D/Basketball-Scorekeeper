@@ -10,6 +10,7 @@ export interface Player {
   steals: number;
   blocks: number;
   fouls: number;
+  turnovers: number; // 失误
   fieldGoalsMade: number;
   fieldGoalsAttempted: number;
   threePointersMade: number;
