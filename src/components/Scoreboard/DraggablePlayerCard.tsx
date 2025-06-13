@@ -1,6 +1,6 @@
 import React from 'react';
 import { Player } from '../../types';
-import { PlayerInfo, PlayerStats, PlayerActions } from '../Player';
+import { PlayerStats, PlayerActions } from '../Player';
 
 interface DraggablePlayerCardProps {
   player: Player;

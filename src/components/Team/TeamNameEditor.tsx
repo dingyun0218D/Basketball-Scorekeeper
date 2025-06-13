@@ -10,7 +10,7 @@ interface TeamNameEditorProps {
 export const TeamNameEditor: React.FC<TeamNameEditorProps> = ({
   team,
   onTeamNameUpdate,
-  side
+  side: _side
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState(team.name);

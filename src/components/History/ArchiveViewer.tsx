@@ -17,29 +17,31 @@ export const ArchiveViewer: React.FC<ArchiveViewerProps> = ({
     return new Date(timestamp).toLocaleString('zh-CN');
   };
 
-  const getTotalStats = (team: any) => {
-    return team.players.reduce((acc: any, player: any) => {
-      acc.points += player.points;
-      acc.rebounds += player.rebounds;
-      acc.assists += player.assists;
-      acc.steals += player.steals;
-      acc.blocks += player.blocks;
-      acc.fouls += player.fouls;
-      acc.turnovers += player.turnovers;
-      return acc;
-    }, {
-      points: 0,
-      rebounds: 0,
-      assists: 0,
-      steals: 0,
-      blocks: 0,
-      fouls: 0,
-      turnovers: 0
-    });
-  };
+  // 统计函数暂时未使用，但保留以备将来使用
+  // const getTotalStats = (team: Team): TeamStats => {
+  //   return team.players.reduce((acc: TeamStats, player: Player) => {
+  //     acc.points += player.points;
+  //     acc.rebounds += player.rebounds;
+  //     acc.assists += player.assists;
+  //     acc.steals += player.steals;
+  //     acc.blocks += player.blocks;
+  //     acc.fouls += player.fouls;
+  //     acc.turnovers += player.turnovers;
+  //     return acc;
+  //   }, {
+  //     points: 0,
+  //     rebounds: 0,
+  //     assists: 0,
+  //     steals: 0,
+  //     blocks: 0,
+  //     fouls: 0,
+  //     turnovers: 0
+  //   });
+  // };
 
-  const homeStats = getTotalStats(gameState.homeTeam);
-  const awayStats = getTotalStats(gameState.awayTeam);
+  // 统计数据可以在需要时计算
+  // const homeStats = getTotalStats(gameState.homeTeam);
+  // const awayStats = getTotalStats(gameState.awayTeam);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

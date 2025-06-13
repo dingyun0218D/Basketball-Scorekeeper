@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useGame } from '../contexts/GameContext';
+import { useGame } from './useGame';
 import { parseTime, formatTime } from '../utils/gameUtils';
 
 export const useGameTimer = () => {

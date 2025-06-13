@@ -5,7 +5,7 @@ import { StatisticsAnalysis } from './components/Statistics';
 import { GameHistory } from './components/History/GameHistory';
 import { TeamNameEditor } from './components/Team/TeamNameEditor';
 import { ConfirmModal } from './components/common/ConfirmModal';
-import { useGame } from './contexts/GameContext';
+import { useGame } from './hooks/useGame';
 import { useGameTimer } from './hooks/useGameTimer';
 import { createDefaultPlayer, validatePlayerNumber } from './utils/gameUtils';
 import { Player } from './types';

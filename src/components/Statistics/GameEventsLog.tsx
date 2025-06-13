@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GameEvent, GameState } from '../../types';
+import { GameState } from '../../types';
 
 interface GameEventsLogProps {
   gameState: GameState;

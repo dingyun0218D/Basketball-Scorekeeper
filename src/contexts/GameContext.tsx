@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useReducer, useEffect, ReactNode } from 'react';
 import { GameState, Team, Player, GameEvent, ScoreType } from '../types';
 import { generateId, createDefaultTeam } from '../utils/gameUtils';
 import { saveCurrentGame, loadCurrentGame, clearCurrentGame } from '../utils/storage';
@@ -558,7 +558,7 @@ interface GameContextType {
   dispatch: React.Dispatch<GameAction>;
 }
 
-const GameContext = createContext<GameContextType | undefined>(undefined);
+export const GameContext = createContext<GameContextType | undefined>(undefined);
 
 // Provider
 interface GameProviderProps {
@@ -606,11 +606,4 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   );
 };
 
-// Hook
-export const useGame = () => {
-  const context = useContext(GameContext);
-  if (!context) {
-    throw new Error('useGame must be used within a GameProvider');
-  }
-  return context;
-}; 
+// Hook is now in separate file to fix React Fast Refresh warning 

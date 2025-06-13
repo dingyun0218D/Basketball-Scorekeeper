@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GameState, GameArchive } from '../../types';
-import { useGame } from '../../contexts/GameContext';
+import { useGame } from '../../hooks/useGame';
 import { ArchiveViewer } from './ArchiveViewer';
 import { DeleteArchiveConfirm } from './DeleteArchiveConfirm';
 import { 

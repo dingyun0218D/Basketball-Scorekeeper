@@ -5,7 +5,7 @@ interface PlayerStatsProps {
   player: Player;
 }
 
-export const PlayerStats: React.FC<PlayerStatsProps> = ({ player }) => {
+export const PlayerStats: React.FC<PlayerStatsProps> = ({ player: _player }) => {
   return (
     <></>
   );
