@@ -38,7 +38,7 @@ jobs:
       run: |
         npm install
         npm install @rollup/rollup-linux-x64-gnu --save-optional || true
-        
+      
     - name: 运行代码检查
       run: npm run lint
       

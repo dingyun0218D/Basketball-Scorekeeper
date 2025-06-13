@@ -1,5 +1,12 @@
 export { Scoreboard } from './Scoreboard';
-export { CompactPlayerCard } from './CompactPlayerCard';
-export { DraggablePlayerCard } from './DraggablePlayerCard';
+export { ScoreboardPlayerSection } from './ScoreboardPlayerSection';
+export { TeamPlayerArea } from './TeamPlayerArea';
+export { SimplePlayerCard } from './SimplePlayerCard';
+export { SimplePlayerInfo } from './SimplePlayerInfo';
+export { PlayerKeyStats } from './PlayerKeyStats';
+export { PlayerBasicInfo } from './PlayerBasicInfo';
 export { OnCourtArea } from './OnCourtArea';
-export { ScoreboardPlayerSection } from './ScoreboardPlayerSection'; 
+export { OnCourtPlayerCard } from './OnCourtPlayerCard';
+export { OnCourtPlayerInfo } from './OnCourtPlayerInfo';
+export { DraggablePlayerCard } from './DraggablePlayerCard';
+export { CompactPlayerCard } from './CompactPlayerCard'; 

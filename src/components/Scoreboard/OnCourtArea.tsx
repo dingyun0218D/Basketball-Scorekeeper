@@ -120,9 +120,9 @@ export const OnCourtArea: React.FC<OnCourtAreaProps> = ({
       
       {/* 提示信息 */}
       {playersOnCourt.length < maxPlayersOnCourt && (
-        <div className="text-xs text-gray-500 mt-2">
+      <div className="text-xs text-gray-500 mt-2">
           💡 拖拽球员卡片到此区域让球员上场，点击场上球员左上角×让其下场
-        </div>
+      </div>
       )}
     </div>
   );

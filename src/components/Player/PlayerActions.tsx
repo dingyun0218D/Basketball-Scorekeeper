@@ -49,7 +49,7 @@ export const PlayerActions: React.FC<PlayerActionsProps> = ({
       <div className="grid grid-cols-3 gap-1 mb-1">
         <button
           onClick={() => onShotAttempt('free')}
-          className="bg-purple-500 hover:bg-purple-600 text-white py-0.5 px-1 rounded text-xs font-medium"
+          className="bg-black hover:bg-gray-800 text-white py-0.5 px-1 rounded text-xs font-medium"
           title="罚球不中"
         >
           罚失
@@ -63,7 +63,7 @@ export const PlayerActions: React.FC<PlayerActionsProps> = ({
         </button>
         <button
           onClick={() => onShotAttempt('three')}
-          className="bg-orange-500 hover:bg-orange-600 text-white py-0.5 px-1 rounded text-xs font-medium"
+          className="bg-gray-300 hover:bg-gray-400 text-gray-700 py-0.5 px-1 rounded text-xs font-medium"
           title="3分投篮不中"
         >
           3失
@@ -80,7 +80,7 @@ export const PlayerActions: React.FC<PlayerActionsProps> = ({
           >
             -1
           </button>
-          <div className="text-xs text-purple-600 font-bold mt-1">
+          <div className="text-xs text-black font-bold mt-1">
             {player.freeThrowsMade}/{player.freeThrowsAttempted}
           </div>
         </div>
@@ -104,7 +104,7 @@ export const PlayerActions: React.FC<PlayerActionsProps> = ({
           >
             -3
           </button>
-          <div className="text-xs text-orange-600 font-bold mt-1">
+          <div className="text-xs text-gray-400 font-bold mt-1">
             {player.threePointersMade}/{player.threePointersAttempted}
           </div>
         </div>
