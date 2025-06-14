@@ -39,11 +39,13 @@ export interface GameEvent {
   timestamp: number;
   quarter: number;
   time: string;
-  type: 'score' | 'foul' | 'timeout' | 'substitution' | 'other';
+  type: 'score' | 'foul' | 'timeout' | 'substitution' | 'rebound' | 'assist' | 'steal' | 'block' | 'turnover' | 'undo' | 'other';
   teamId: string;
   playerId?: string;
   description: string;
   points?: number;
+  stat?: string; // 用于记录统计类型（rebounds, assists, steals, blocks, turnovers）
+  value?: number; // 用于记录统计变化值
 }
 
 // 比赛状态接口

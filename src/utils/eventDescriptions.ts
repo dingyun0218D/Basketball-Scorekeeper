@@ -66,6 +66,66 @@ const substitutionComments = {
   ]
 };
 
+// 搞笑的篮板评论
+const reboundComments = [
+  '抢篮板就是要这样霸道！',
+  '篮下统治者！',
+  '这球是我的！',
+  '篮板机器！',
+  '卡位很到位！',
+  '跳得比别人高！',
+  '占住有利位置！',
+  '二次进攻机会来了！'
+];
+
+// 搞笑的助攻评论
+const assistComments = [
+  '神级传球！',
+  '眼观六路！',
+  '这传球太精妙了！',
+  '队友接得很舒服！',
+  '团队篮球的魅力！',
+  '传球大师！',
+  '视野开阔！',
+  '配合太默契了！'
+];
+
+// 搞笑的抢断评论
+const stealComments = [
+  '眼疾手快！',
+  '防守如鬼魅！',
+  '料到了你的想法！',
+  '这就是预判！',
+  '偷鸡成功！',
+  '防守反击的机会！',
+  '手长优势！',
+  '对手懵了！'
+];
+
+// 搞笑的盖帽评论
+const blockComments = [
+  '不进！',
+  '盖帽大帽！',
+  '这是禁飞区！',
+  '别想在我头上得分！',
+  '回去练练再来！',
+  '封盖王者！',
+  '篮筐守护神！',
+  '这球不给进！'
+];
+
+// 搞笑的撤销评论
+const undoComments = [
+  '刚才那球不算数！',
+  '重新来过！',
+  '误操作，撤回！',
+  '让我重新考虑一下！',
+  '这个不对，改了！',
+  '操作失误，修正中！',
+  '数据有误，已纠正！',
+  '技术调整！'
+];
+
 // 获取球员信息
 const getPlayerInfo = (playerId: string, teamId: string, gameState: GameState) => {
   const team = teamId === gameState.homeTeam.id ? gameState.homeTeam : gameState.awayTeam;
@@ -151,17 +211,45 @@ export const generateFunEventDescription = (event: GameEvent, gameState: GameSta
       return `${playerName}${action}，${teamName}进行人员调整！${comment}`;
     }
     
+    case 'rebound': {
+      const baseDescription = `${playerName}抢下篮板球，${teamName}获得球权`;
+      const comment = getRandomComment(reboundComments);
+      return `${baseDescription}！${comment}`;
+    }
+
+    case 'assist': {
+      const baseDescription = `${playerName}送出精彩助攻，${teamName}配合默契`;
+      const comment = getRandomComment(assistComments);
+      return `${baseDescription}！${comment}`;
+    }
+
+    case 'steal': {
+      const baseDescription = `${playerName}完成抢断，${teamName}断球成功`;
+      const comment = getRandomComment(stealComments);
+      return `${baseDescription}！${comment}`;
+    }
+
+    case 'block': {
+      const baseDescription = `${playerName}送出大帽，${teamName}防守强硬`;
+      const comment = getRandomComment(blockComments);
+      return `${baseDescription}！${comment}`;
+    }
+
+    case 'turnover': {
+      const baseDescription = `${playerName}出现失误，${teamName}丢掉球权`;
+      const comment = getRandomComment(turnoverComments);
+      return `${baseDescription}！${comment}`;
+    }
+
+    case 'undo': {
+      const baseDescription = event.stat === 'score' 
+        ? `${playerName}撤销${Math.abs(event.points || 0)}分得分，${teamName}分数调整`
+        : `${playerName}撤销${event.stat}记录，${teamName}数据修正`;
+      const comment = getRandomComment(undoComments);
+      return `${baseDescription}！${comment}`;
+    }
+    
     case 'other': {
-      // 检查是否是失误相关
-      if (event.description.includes('失误') || event.description.includes('turnover')) {
-        const baseDescription = event.playerId 
-          ? `${playerName}出现失误，${teamName}丢掉球权`
-          : `${teamName}出现失误`;
-        
-        const comment = getRandomComment(turnoverComments);
-        return `${baseDescription}！${comment}`;
-      }
-      
       return event.description;
     }
     

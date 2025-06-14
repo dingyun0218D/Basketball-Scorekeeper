@@ -17,7 +17,13 @@ export const EventTextList: React.FC<EventTextListProps> = ({ events, gameState 
   const getEventIcon = (type: string) => {
     switch (type) {
       case 'score': return '🏀';
+      case 'rebound': return '🏀';
+      case 'assist': return '🤝';
+      case 'steal': return '🔐';
+      case 'block': return '🚫';
+      case 'turnover': return '💥';
       case 'foul': return '⚠️';
+      case 'undo': return '↩️';
       case 'timeout': return '⏸️';
       case 'substitution': return '🔄';
       default: return '📝';
@@ -51,7 +57,7 @@ export const EventTextList: React.FC<EventTextListProps> = ({ events, gameState 
 
       {/* 事件列表 */}
       <div className="p-4 max-h-[500px] overflow-y-auto">
-        <div className="space-y-2 font-mono text-sm leading-relaxed">
+        <div className="space-y-0.5 font-mono text-sm leading-none">
           {events.map((event, index) => {
             const timeDesc = generateTimeDescription(event.quarter, event.time);
             const funDescription = generateFunEventDescription(event, gameState);
@@ -123,8 +129,13 @@ export const EventTextList: React.FC<EventTextListProps> = ({ events, gameState 
           </span>
           <span>
             {events.filter(e => e.type === 'score').length} 次得分 · 
+            {events.filter(e => e.type === 'rebound').length} 次篮板 · 
+            {events.filter(e => e.type === 'assist').length} 次助攻 · 
+            {events.filter(e => e.type === 'steal').length} 次抢断 · 
+            {events.filter(e => e.type === 'block').length} 次盖帽 · 
+            {events.filter(e => e.type === 'turnover').length} 次失误 · 
             {events.filter(e => e.type === 'foul').length} 次犯规 · 
-            {events.filter(e => e.type === 'substitution').length} 次换人
+            {events.filter(e => e.type === 'undo').length} 次撤销
           </span>
         </div>
       </div>

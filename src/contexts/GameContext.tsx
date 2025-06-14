@@ -2,6 +2,14 @@ import React, { createContext } from 'react';
 import { GameState, Team, Player, GameEvent, ScoreType } from '../types';
 import { generateId, createDefaultTeam } from '../utils/gameUtils';
 import { clearCurrentGame } from '../utils/storage';
+import { createStatEvent, createUndoEvent } from '../utils/statisticsEventUtils';
+import { createScoreEvent, updatePlayerScoreStats, updatePlayersPlusMinus } from '../utils/scoreEventUtils';
+import { createFoulEvent, updateTeamFouls, updatePlayerFouls } from '../utils/foulEventUtils';
+import { createTimeoutEvent, updateTeamTimeouts, hasTimeoutsRemaining } from '../utils/timeoutEventUtils';
+import { createSubstitutionEvent, togglePlayerCourtStatus, canPlayerEnterCourt } from '../utils/substitutionEventUtils';
+import { createQuarterEndEvent } from '../utils/quarterEventUtils';
+import { createShotAttemptEvent, updateTeamPlayerShotStats } from '../utils/shotEventUtils';
+import { canUndoScore, undoPlayerScoreStats } from '../utils/undoEventUtils';
 
 // Action types
 type GameAction =
@@ -89,6 +97,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       const team = isHomeTeam ? state.homeTeam : state.awayTeam;
       const oppositeTeam = isHomeTeam ? state.awayTeam : state.homeTeam;
       
+      // 更新队伍得分
       // eslint-disable-next-line prefer-const
       let updatedTeam = { ...team, score: Math.max(0, team.score + points) };
       // eslint-disable-next-line prefer-const
@@ -96,57 +105,21 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       
       // 更新在场球员的正负值
       if (points !== 0) {
-        updatedTeam.players = updatedTeam.players.map(player => 
-          player.isOnCourt ? { ...player, plusMinus: player.plusMinus + points } : player
-        );
-        updatedOppositeTeam.players = updatedOppositeTeam.players.map(player => 
-          player.isOnCourt ? { ...player, plusMinus: player.plusMinus - points } : player
-        );
+        updatedTeam.players = updatePlayersPlusMinus(updatedTeam.players, points, true);
+        updatedOppositeTeam.players = updatePlayersPlusMinus(updatedOppositeTeam.players, points, false);
       }
       
       // 更新球员数据
       if (playerId) {
         updatedTeam.players = updatedTeam.players.map(player => {
           if (player.id === playerId) {
-            const updatedPlayer = { ...player, points: Math.max(0, player.points + points) };
-            
-            // 根据得分类型更新相应统计（只在正分时更新）
-            if (points > 0) {
-              switch (scoreType) {
-                case '1':
-                  updatedPlayer.freeThrowsMade += 1;
-                  updatedPlayer.freeThrowsAttempted += 1;
-                  break;
-                case '2':
-                  updatedPlayer.fieldGoalsMade += 1;
-                  updatedPlayer.fieldGoalsAttempted += 1;
-                  break;
-                case '3':
-                  updatedPlayer.threePointersMade += 1;
-                  updatedPlayer.threePointersAttempted += 1;
-                  updatedPlayer.fieldGoalsMade += 1;
-                  updatedPlayer.fieldGoalsAttempted += 1;
-                  break;
-              }
-            }
-            
-            return updatedPlayer;
+            return updatePlayerScoreStats(player, points, scoreType);
           }
           return player;
         });
       }
 
-      const event: GameEvent = {
-        id: generateId(),
-        timestamp: Date.now(),
-        quarter: state.quarter,
-        time: state.time,
-        type: 'score',
-        teamId,
-        playerId,
-        description: points > 0 ? `${team.name} 得${points}分` : `${team.name} 减${Math.abs(points)}分`,
-        points,
-      };
+      const event = createScoreEvent(teamId, playerId, team, points, state.quarter, state.time);
 
       return {
         ...state,
@@ -168,75 +141,28 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       
       const points = parseInt(scoreType);
       
-      // 检查球员是否有足够的得分和统计数据可以撤销
-      if (player.points < points) return state;
+      // 检查是否可以撤销
+      if (!canUndoScore(player, points, scoreType)) return state;
       
-      let canUndo = false;
-      switch (scoreType) {
-        case '1':
-          canUndo = player.freeThrowsMade > 0;
-          break;
-        case '2':
-          canUndo = player.fieldGoalsMade > 0 && (player.fieldGoalsMade - player.threePointersMade) > 0;
-          break;
-        case '3':
-          canUndo = player.threePointersMade > 0;
-          break;
-      }
-      
-      if (!canUndo) return state;
-      
+      // 更新队伍得分
       // eslint-disable-next-line prefer-const
       let updatedTeam = { ...team, score: Math.max(0, team.score - points) };
       // eslint-disable-next-line prefer-const
       let updatedOppositeTeam = { ...oppositeTeam };
       
       // 撤销在场球员的正负值
-      updatedTeam.players = updatedTeam.players.map(p => 
-        p.isOnCourt ? { ...p, plusMinus: p.plusMinus - points } : p
-      );
-      updatedOppositeTeam.players = updatedOppositeTeam.players.map(p => 
-        p.isOnCourt ? { ...p, plusMinus: p.plusMinus + points } : p
-      );
+      updatedTeam.players = updatePlayersPlusMinus(updatedTeam.players, -points, true);
+      updatedOppositeTeam.players = updatePlayersPlusMinus(updatedOppositeTeam.players, -points, false);
       
+      // 撤销球员统计
       updatedTeam.players = updatedTeam.players.map(p => {
         if (p.id === playerId) {
-          const updatedPlayer = { ...p, points: Math.max(0, p.points - points) };
-          
-          // 撤销相应的统计数据
-          switch (scoreType) {
-            case '1':
-              updatedPlayer.freeThrowsMade = Math.max(0, updatedPlayer.freeThrowsMade - 1);
-              updatedPlayer.freeThrowsAttempted = Math.max(0, updatedPlayer.freeThrowsAttempted - 1);
-              break;
-            case '2':
-              updatedPlayer.fieldGoalsMade = Math.max(0, updatedPlayer.fieldGoalsMade - 1);
-              updatedPlayer.fieldGoalsAttempted = Math.max(0, updatedPlayer.fieldGoalsAttempted - 1);
-              break;
-            case '3':
-              updatedPlayer.threePointersMade = Math.max(0, updatedPlayer.threePointersMade - 1);
-              updatedPlayer.threePointersAttempted = Math.max(0, updatedPlayer.threePointersAttempted - 1);
-              updatedPlayer.fieldGoalsMade = Math.max(0, updatedPlayer.fieldGoalsMade - 1);
-              updatedPlayer.fieldGoalsAttempted = Math.max(0, updatedPlayer.fieldGoalsAttempted - 1);
-              break;
-          }
-          
-          return updatedPlayer;
+          return undoPlayerScoreStats(p, points, scoreType);
         }
         return p;
       });
 
-      const event: GameEvent = {
-        id: generateId(),
-        timestamp: Date.now(),
-        quarter: state.quarter,
-        time: state.time,
-        type: 'score',
-        teamId,
-        playerId,
-        description: `${team.name} 撤销${points}分`,
-        points: -points,
-      };
+      const event = createUndoEvent(teamId, playerId, player, points, state.quarter, state.time);
 
       return {
         ...state,
@@ -261,10 +187,15 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
         ),
       };
 
+      // 为特定统计类型创建事件记录
+      const player = team.players.find(p => p.id === playerId);
+      const event = player ? createStatEvent(teamId, playerId, player, stat, value, state.quarter, state.time) : null;
+
       return {
         ...state,
         homeTeam: isHomeTeam ? updatedTeam : state.homeTeam,
         awayTeam: isHomeTeam ? state.awayTeam : updatedTeam,
+        events: event ? [event, ...state.events] : state.events,
         updatedAt: Date.now(),
       };
     }
@@ -274,41 +205,8 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       const isHomeTeam = teamId === state.homeTeam.id;
       const team = isHomeTeam ? state.homeTeam : state.awayTeam;
       
-      const updatedTeam = {
-        ...team,
-        players: team.players.map(player => {
-          if (player.id === playerId) {
-            const updatedPlayer = { ...player };
-            
-            switch (shotType) {
-              case 'field':
-                updatedPlayer.fieldGoalsAttempted += 1;
-                break;
-              case 'three':
-                updatedPlayer.threePointersAttempted += 1;
-                updatedPlayer.fieldGoalsAttempted += 1;
-                break;
-              case 'free':
-                updatedPlayer.freeThrowsAttempted += 1;
-                break;
-            }
-            
-            return updatedPlayer;
-          }
-          return player;
-        }),
-      };
-
-      const event: GameEvent = {
-        id: generateId(),
-        timestamp: Date.now(),
-        quarter: state.quarter,
-        time: state.time,
-        type: 'other',
-        teamId,
-        playerId,
-        description: `${team.name} ${shotType === 'field' ? '投篮' : shotType === 'three' ? '3分' : '罚球'}出手`,
-      };
+      const updatedTeam = updateTeamPlayerShotStats(team, playerId, shotType);
+      const event = createShotAttemptEvent(teamId, playerId, team, shotType, state.quarter, state.time);
 
       return {
         ...state,
@@ -324,27 +222,15 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       const isHomeTeam = teamId === state.homeTeam.id;
       const team = isHomeTeam ? state.homeTeam : state.awayTeam;
       
-      // eslint-disable-next-line prefer-const
-      let updatedTeam = { ...team, fouls: team.fouls + 1 };
+      // 更新队伍犯规数
+      let updatedTeam = updateTeamFouls(team);
       
+      // 如果指定了球员，更新球员犯规数
       if (playerId) {
-        updatedTeam.players = team.players.map(player =>
-          player.id === playerId
-            ? { ...player, fouls: player.fouls + 1 }
-            : player
-        );
+        updatedTeam = updatePlayerFouls(updatedTeam, playerId);
       }
 
-      const event: GameEvent = {
-        id: generateId(),
-        timestamp: Date.now(),
-        quarter: state.quarter,
-        time: state.time,
-        type: 'foul',
-        teamId,
-        playerId,
-        description: `${team.name} 犯规`,
-      };
+      const event = createFoulEvent(teamId, playerId, team, state.quarter, state.time);
 
       return {
         ...state,
@@ -360,19 +246,11 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       const isHomeTeam = teamId === state.homeTeam.id;
       const team = isHomeTeam ? state.homeTeam : state.awayTeam;
       
-      if (team.timeouts <= 0) return state;
+      // 检查是否还有暂停次数
+      if (!hasTimeoutsRemaining(team)) return state;
       
-      const updatedTeam = { ...team, timeouts: team.timeouts - 1 };
-
-      const event: GameEvent = {
-        id: generateId(),
-        timestamp: Date.now(),
-        quarter: state.quarter,
-        time: state.time,
-        type: 'timeout',
-        teamId,
-        description: `${team.name} 请求暂停`,
-      };
+      const updatedTeam = updateTeamTimeouts(team);
+      const event = createTimeoutEvent(teamId, team, state.quarter, state.time);
 
       return {
         ...state,
@@ -392,34 +270,13 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       const player = team.players.find(p => p.id === playerId);
       if (!player) return state;
       
-      const playersOnCourt = team.players.filter(p => p.isOnCourt);
-      
-      // 如果球员要上场，检查是否已有5人在场
-      if (!player.isOnCourt && playersOnCourt.length >= 5) {
+      // 检查是否可以上场
+      if (!canPlayerEnterCourt(team, playerId)) {
         return state; // 不允许超过5人在场
       }
       
-      const updatedTeam = {
-        ...team,
-        players: team.players.map(p => {
-          if (p.id === playerId) {
-            // 只切换上场状态，不重置正负值（正负值应该累积计算）
-            return { ...p, isOnCourt: !p.isOnCourt };
-          }
-          return p;
-        }),
-      };
-
-      const event: GameEvent = {
-        id: generateId(),
-        timestamp: Date.now(),
-        quarter: state.quarter,
-        time: state.time,
-        type: 'substitution',
-        teamId,
-        playerId,
-        description: `${player.name} ${player.isOnCourt ? '下场' : '上场'}`,
-      };
+      const updatedTeam = togglePlayerCourtStatus(team, playerId);
+      const event = createSubstitutionEvent(teamId, playerId, player, state.quarter, state.time);
 
       return {
         ...state,
@@ -460,15 +317,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       return { ...state, time: action.payload.time, updatedAt: Date.now() };
 
     case 'NEXT_QUARTER': {
-      const event: GameEvent = {
-        id: generateId(),
-        timestamp: Date.now(),
-        quarter: state.quarter,
-        time: state.time,
-        type: 'other',
-        teamId: '',
-        description: `第${state.quarter}节结束`,
-      };
+      const event = createQuarterEndEvent(state.quarter, state.time);
 
       return {
         ...state,
