@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { GameState } from '../../types';
+import { EventTextList } from './EventTextList';
 
 interface GameEventsLogProps {
   gameState: GameState;
@@ -10,23 +11,6 @@ type EventFilter = 'all' | 'score' | 'foul' | 'timeout' | 'substitution' | 'othe
 export const GameEventsLog: React.FC<GameEventsLogProps> = ({ gameState }) => {
   const [filter, setFilter] = useState<EventFilter>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  // 获取球员名称
-  const getPlayerName = (playerId: string, teamId: string) => {
-    const team = teamId === gameState.homeTeam.id ? gameState.homeTeam : gameState.awayTeam;
-    const player = team.players.find(p => p.id === playerId);
-    return player ? `#${player.number} ${player.name}` : '未知球员';
-  };
-
-  // 获取队伍名称
-  const getTeamName = (teamId: string) => {
-    return teamId === gameState.homeTeam.id ? gameState.homeTeam.name : gameState.awayTeam.name;
-  };
-
-  // 获取队伍颜色
-  const getTeamColor = (teamId: string) => {
-    return teamId === gameState.homeTeam.id ? gameState.homeTeam.color : gameState.awayTeam.color;
-  };
 
   // 过滤事件
   const filteredEvents = gameState.events.filter(event => {
@@ -41,26 +25,6 @@ export const GameEventsLog: React.FC<GameEventsLogProps> = ({ gameState }) => {
       : a.timestamp - b.timestamp;
   });
 
-  // 格式化时间戳
-  const formatTimestamp = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
-
-  // 获取事件图标
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case 'score': return '🏀';
-      case 'foul': return '⚠️';
-      case 'timeout': return '⏸️';
-      case 'substitution': return '🔄';
-      default: return '📝';
-    }
-  };
-
   // 获取事件类型显示名称
   const getEventTypeName = (type: string) => {
     switch (type) {
@@ -69,17 +33,6 @@ export const GameEventsLog: React.FC<GameEventsLogProps> = ({ gameState }) => {
       case 'timeout': return '暂停';
       case 'substitution': return '换人';
       default: return '其他';
-    }
-  };
-
-  // 获取事件类型颜色
-  const getEventTypeColor = (type: string) => {
-    switch (type) {
-      case 'score': return 'text-green-600 bg-green-50';
-      case 'foul': return 'text-yellow-600 bg-yellow-50';
-      case 'timeout': return 'text-blue-600 bg-blue-50';
-      case 'substitution': return 'text-purple-600 bg-purple-50';
-      default: return 'text-gray-600 bg-gray-50';
     }
   };
 
@@ -172,106 +125,16 @@ export const GameEventsLog: React.FC<GameEventsLogProps> = ({ gameState }) => {
         </div>
       </div>
 
-      {/* 事件列表 - 紧凑布局 */}
-      <div className="bg-white rounded-lg shadow-lg">
-        {sortedEvents.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <p>暂无{filter === 'all' ? '' : getEventTypeName(filter)}事件记录</p>
-          </div>
-        ) : (
-          <div className="overflow-hidden">
-            {/* 表头 */}
-            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-600">
-                <div className="col-span-1">类型</div>
-                <div className="col-span-2">时间</div>
-                <div className="col-span-2">队伍</div>
-                <div className="col-span-2">球员</div>
-                <div className="col-span-4">事件描述</div>
-                <div className="col-span-1 text-right">分数</div>
-              </div>
-            </div>
-            
-                         {/* 事件列表 */}
-             <div className="max-h-[600px] overflow-y-auto">
-              {sortedEvents.map((event, index) => (
-                                 <div 
-                   key={event.id} 
-                   className={`px-4 py-2 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                     index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                   }`}
-                 >
-                  <div className="grid grid-cols-12 gap-2 items-center text-sm">
-                    {/* 事件类型图标 */}
-                    <div className="col-span-1">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${getEventTypeColor(event.type)}`}>
-                        <span className="text-xs">{getEventIcon(event.type)}</span>
-                      </div>
-                    </div>
-                    
-                    {/* 时间信息 */}
-                    <div className="col-span-2 text-xs text-gray-600">
-                      <div>第{event.quarter}节</div>
-                      <div className="text-gray-500">{event.time}</div>
-                    </div>
-                    
-                    {/* 队伍信息 */}
-                    <div className="col-span-2">
-                      <span 
-                        className="inline-block px-2 py-1 rounded text-xs font-medium"
-                        style={{ 
-                          backgroundColor: getTeamColor(event.teamId) + '15',
-                          color: getTeamColor(event.teamId),
-                          border: `1px solid ${getTeamColor(event.teamId)}30`
-                        }}
-                      >
-                        {getTeamName(event.teamId)}
-                      </span>
-                    </div>
-                    
-                    {/* 球员信息 */}
-                    <div className="col-span-2 text-xs">
-                      {event.playerId ? (
-                        <span className="text-gray-700 font-medium">
-                          {getPlayerName(event.playerId, event.teamId)}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </div>
-                    
-                                         {/* 事件描述 */}
-                     <div className="col-span-4 text-sm text-gray-900">
-                       <span className="truncate block">{event.description}</span>
-                     </div>
-                    
-                    {/* 分数变化 */}
-                    <div className="col-span-1 text-right">
-                      {event.points !== undefined ? (
-                        <span className={`text-sm font-bold ${
-                          event.points > 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {event.points > 0 ? '+' : ''}{event.points}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 text-xs">-</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            {/* 底部统计信息 */}
-            <div className="bg-gray-50 px-4 py-2 border-t border-gray-200">
-              <div className="flex justify-between items-center text-xs text-gray-600">
-                <span>共显示 {filteredEvents.length} 条记录</span>
-                <span>实际发生时间：{formatTimestamp(Date.now())}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* 事件列表 - 使用新的文本框风格组件 */}
+      {sortedEvents.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-lg p-8 text-center text-gray-500">
+          <div className="text-4xl mb-4">📝</div>
+          <p>暂无{filter === 'all' ? '' : getEventTypeName(filter)}事件记录</p>
+          <p className="text-sm text-gray-400 mt-2">比赛开始后，精彩瞬间将在这里实时显示</p>
+        </div>
+      ) : (
+        <EventTextList events={sortedEvents} gameState={gameState} />
+      )}
     </div>
   );
 }; 

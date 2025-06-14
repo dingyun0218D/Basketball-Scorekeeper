@@ -1,24 +1,28 @@
 import React from 'react';
-import { Team } from '../../types';
+import { Team, Player } from '../../types';
 import { TeamPlayerArea } from './TeamPlayerArea';
 import { OnCourtArea } from './OnCourtArea';
 
 interface ScoreboardPlayerSectionProps {
   homeTeam: Team;
   awayTeam: Team;
+  savedPlayers: Player[];
   onScoreUpdate: (teamId: string, points: number, playerId?: string) => void;
   onPlayerStatUpdate: (teamId: string, playerId: string, stat: string, value: number) => void;
   onAddFoul: (teamId: string, playerId: string) => void;
   onShotAttempt: (teamId: string, playerId: string, shotType: 'field' | 'three' | 'free') => void;
   onUndoScore: (teamId: string, playerId: string, scoreType: '1' | '2' | '3') => void;
   onRemovePlayer: (teamId: string, playerId: string) => void;
-  onAddPlayer: (teamId: string) => void;
+  onAddPlayer: (teamId: string, player: Player) => void;
   onTogglePlayerCourtStatus: (teamId: string, playerId: string) => void;
+  onSavePlayer: (player: Player) => void;
+  onDeleteSavedPlayer: (playerId: string) => void;
 }
 
 export const ScoreboardPlayerSection: React.FC<ScoreboardPlayerSectionProps> = ({
   homeTeam,
   awayTeam,
+  savedPlayers,
   onScoreUpdate,
   onPlayerStatUpdate,
   onAddFoul,
@@ -26,7 +30,9 @@ export const ScoreboardPlayerSection: React.FC<ScoreboardPlayerSectionProps> = (
   onUndoScore,
   onRemovePlayer,
   onAddPlayer,
-  onTogglePlayerCourtStatus
+  onTogglePlayerCourtStatus,
+  onSavePlayer,
+  onDeleteSavedPlayer
 }) => {
   const maxPlayersToShow = 15; // 每队最多显示15个球员
 
@@ -59,16 +65,22 @@ export const ScoreboardPlayerSection: React.FC<ScoreboardPlayerSectionProps> = (
         <TeamPlayerArea
           team={homeTeam}
           maxPlayersToShow={maxPlayersToShow}
+          savedPlayers={savedPlayers}
           onAddPlayer={onAddPlayer}
           onTogglePlayerCourtStatus={onTogglePlayerCourtStatus}
           onRemovePlayer={onRemovePlayer}
-                />
+          onSavePlayer={onSavePlayer}
+          onDeleteSavedPlayer={onDeleteSavedPlayer}
+        />
         <TeamPlayerArea
           team={awayTeam}
           maxPlayersToShow={maxPlayersToShow}
+          savedPlayers={savedPlayers}
           onAddPlayer={onAddPlayer}
           onTogglePlayerCourtStatus={onTogglePlayerCourtStatus}
           onRemovePlayer={onRemovePlayer}
+          onSavePlayer={onSavePlayer}
+          onDeleteSavedPlayer={onDeleteSavedPlayer}
         />
       </div>
     </div>

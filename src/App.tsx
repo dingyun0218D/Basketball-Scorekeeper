@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScoreboardPlayerSection } from './components/Scoreboard';
 import { TimerControls } from './components/GameControls';
 import { StatisticsAnalysis } from './components/Statistics';
@@ -23,6 +23,26 @@ const App: React.FC = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [playerToDelete, setPlayerToDelete] = useState<{teamId: string; playerId: string; playerInfo: Player} | null>(null);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
+  
+  // 球员库状态管理 - 从localStorage加载初始数据
+  const [savedPlayers, setSavedPlayers] = useState<Player[]>(() => {
+    try {
+      const saved = localStorage.getItem('basketball-saved-players');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('加载保存的球员数据失败:', error);
+      return [];
+    }
+  });
+
+  // 监听savedPlayers变化，自动保存到localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('basketball-saved-players', JSON.stringify(savedPlayers));
+    } catch (error) {
+      console.error('保存球员数据到本地存储失败:', error);
+    }
+  }, [savedPlayers]);
 
   // 处理得分更新
   const handleScoreUpdate = (teamId: string, points: number, playerId?: string) => {
@@ -85,6 +105,34 @@ const App: React.FC = () => {
   const cancelRemovePlayer = () => {
     setShowConfirmModal(false);
     setPlayerToDelete(null);
+  };
+
+  // 处理添加球员（新的签名）
+  const handleAddPlayer = (teamId: string, player: Player) => {
+    dispatch({
+      type: 'ADD_PLAYER',
+      payload: { teamId, player }
+    });
+  };
+
+  // 处理保存球员到球员库
+  const handleSavePlayer = (player: Player) => {
+    // 检查是否已存在相同ID的球员
+    const existingIndex = savedPlayers.findIndex(p => p.id === player.id);
+    if (existingIndex >= 0) {
+      // 更新现有球员
+      setSavedPlayers(prev => prev.map((p: Player, index: number) => 
+        index === existingIndex ? player : p
+      ));
+    } else {
+      // 添加新球员
+      setSavedPlayers(prev => [...prev, player]);
+    }
+  };
+
+  // 处理删除已保存的球员
+  const handleDeleteSavedPlayer = (playerId: string) => {
+    setSavedPlayers(prev => prev.filter((p: Player) => p.id !== playerId));
   };
 
   // 处理出手统计
@@ -324,17 +372,17 @@ const App: React.FC = () => {
             <ScoreboardPlayerSection
               homeTeam={gameState.homeTeam}
               awayTeam={gameState.awayTeam}
+              savedPlayers={savedPlayers}
               onScoreUpdate={handleScoreUpdate}
               onPlayerStatUpdate={handlePlayerStatUpdate}
               onAddFoul={handleAddFoul}
               onShotAttempt={handleShotAttempt}
               onUndoScore={handleUndoScore}
               onRemovePlayer={handleRemovePlayer}
-              onAddPlayer={(teamId) => {
-                setSelectedTeamId(teamId);
-                setShowAddPlayerModal(true);
-              }}
+              onAddPlayer={handleAddPlayer}
               onTogglePlayerCourtStatus={handleTogglePlayerCourtStatus}
+              onSavePlayer={handleSavePlayer}
+              onDeleteSavedPlayer={handleDeleteSavedPlayer}
             />
           </div>
         );
