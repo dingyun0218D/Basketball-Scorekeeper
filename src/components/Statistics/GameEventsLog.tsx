@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { GameState } from '../../types';
-import { EventTextList } from './EventTextList';
-import { EventFilterControls, EventFilter, filterEvents, sortEvents, getEventTypeName } from './EventFilterControls';
+import { EventFilterControls } from './EventFilterControls';
+import { EventFilter, filterEvents, sortEvents, getEventTypeName } from '../../utils/eventFilterUtils';
 import { EventStatsCards } from './EventStatsCards';
+import { EventTextList } from './EventTextList';
 
 interface GameEventsLogProps {
   gameState: GameState;
