@@ -8,11 +8,10 @@ import {
   getDocs,
   query,
   orderBy,
-  serverTimestamp,
-  Timestamp
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { GameState, GameEvent, Player } from '../types';
+import { GameState, GameEvent } from '../types';
 
 export class FirestoreService {
   private gameCollection = 'games';
@@ -100,7 +99,6 @@ export class FirestoreService {
   // 检查会话是否存在
   async checkSessionExists(sessionId: string): Promise<boolean> {
     try {
-      const gameDoc = doc(db, this.gameCollection, sessionId);
       const snapshot = await getDocs(query(collection(db, this.gameCollection)));
       return snapshot.docs.some(doc => doc.id === sessionId);
     } catch (error) {

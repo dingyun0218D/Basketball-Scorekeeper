@@ -26,7 +26,7 @@ interface UseCollaborativeGameReturn {
 export const useCollaborativeGame = ({
   sessionId: initialSessionId,
   user,
-  initialGameState
+  initialGameState: _initialGameState
 }: UseCollaborativeGameProps): UseCollaborativeGameReturn => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [events, setEvents] = useState<GameEvent[]>([]);

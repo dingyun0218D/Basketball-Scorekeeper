@@ -26,15 +26,12 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   
   const {
     gameState: collaborativeGameState,
-    events,
     connectedUsers,
     isConnected,
     isHost,
     sessionId,
     createSession,
     joinSession,
-    updateGameState,
-    addEvent,
     leaveSession,
     error
   } = useCollaborativeGame({
