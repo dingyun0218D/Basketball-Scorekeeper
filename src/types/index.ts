@@ -36,7 +36,7 @@ export interface Team {
 // 比赛事件接口
 export interface GameEvent {
   id: string;
-  timestamp: number;
+  timestamp: Date | number; // 支持 Date 和 number 类型
   quarter: number;
   time: string;
   type: 'score' | 'foul' | 'timeout' | 'substitution' | 'rebound' | 'assist' | 'steal' | 'block' | 'turnover' | 'undo' | 'other';
@@ -46,6 +46,7 @@ export interface GameEvent {
   points?: number;
   stat?: string; // 用于记录统计类型（rebounds, assists, steals, blocks, turnovers）
   value?: number; // 用于记录统计变化值
+  sessionId?: string; // 会话ID，用于实时协作
 }
 
 // 比赛状态接口
@@ -59,13 +60,17 @@ export interface GameState {
   isRunning: boolean;
   isPaused: boolean;
   events: GameEvent[];
-  createdAt: number;
-  updatedAt: number;
+  createdAt: Date | number;
+  updatedAt: Date | number;
   lastScoreSnapshot?: { // 用于计算正负值的得分快照
     homeScore: number;
     awayScore: number;
     timestamp: number;
   };
+  // 实时协作相关字段
+  sessionId?: string; // 会话ID
+  activeUsers?: { [userId: string]: Date | number }; // 活跃用户及其最后活动时间
+  lastActiveAt?: Date | number; // 最后活动时间
 }
 
 // 计分按钮类型
@@ -115,4 +120,25 @@ export interface GameArchive {
   savedAt: number;
   isCompleted: boolean;
   name?: string; // 可选的存档名称
+}
+
+// 实时协作相关接口
+export interface CollaborativeSession {
+  sessionId: string;
+  gameState: GameState;
+  connectedUsers: Array<{
+    userId: string;
+    userName: string;
+    lastSeen: Date;
+    isActive: boolean;
+  }>;
+  createdAt: Date;
+  lastActivity: Date;
+}
+
+// 用户信息接口
+export interface User {
+  id: string;
+  name: string;
+  isHost?: boolean; // 是否为主机
 } 

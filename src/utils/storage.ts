@@ -88,7 +88,10 @@ export const saveGameToHistory = (gameState: GameState): void => {
       homeScore: gameState.homeTeam.score,
       awayScore: gameState.awayTeam.score,
       date: new Date(gameState.createdAt).toLocaleDateString('zh-CN'),
-      duration: calculateGameDuration(gameState.createdAt, gameState.updatedAt),
+      duration: calculateGameDuration(
+        typeof gameState.createdAt === 'number' ? gameState.createdAt : gameState.createdAt.getTime(),
+        typeof gameState.updatedAt === 'number' ? gameState.updatedAt : gameState.updatedAt.getTime()
+      ),
       quarters: gameState.quarter,
       isCompleted: gameState.quarter >= 4 && !gameState.isRunning,
     };

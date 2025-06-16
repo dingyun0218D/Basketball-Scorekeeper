@@ -15,6 +15,7 @@ import { canUndoScore, undoPlayerScoreStats } from '../utils/undoEventUtils';
 type GameAction =
   | { type: 'LOAD_GAME'; payload: GameState }
   | { type: 'LOAD_ARCHIVE'; payload: GameState }
+  | { type: 'SYNC_COLLABORATIVE_STATE'; payload: GameState }
   | { type: 'START_NEW_GAME'; payload: { homeTeam: Team; awayTeam: Team } }
   | { type: 'UPDATE_SCORE'; payload: { teamId: string; points: number; playerId?: string; scoreType: ScoreType } }
   | { type: 'UNDO_SCORE'; payload: { teamId: string; playerId: string; scoreType: ScoreType } }
@@ -79,6 +80,12 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       return {
         ...action.payload,
         updatedAt: Date.now(), // 更新时间戳以触发自动保存
+      };
+
+    case 'SYNC_COLLABORATIVE_STATE':
+      // 同步协作状态，不触发自动保存
+      return {
+        ...action.payload,
       };
 
     case 'START_NEW_GAME':

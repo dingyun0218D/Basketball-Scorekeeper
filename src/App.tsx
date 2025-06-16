@@ -5,10 +5,11 @@ import { StatisticsAnalysis } from './components/Statistics';
 import { GameHistory } from './components/History/GameHistory';
 import { TeamNameEditor } from './components/Team/TeamNameEditor';
 import { ConfirmModal } from './components/common/ConfirmModal';
+import CollaborativeGameManager from './components/Collaborative/CollaborativeGameManager';
 import { useGame } from './hooks/useGame';
 import { useGameTimer } from './hooks/useGameTimer';
 import { createDefaultPlayer, validatePlayerNumber } from './utils/gameUtils';
-import { Player } from './types';
+import { Player, User } from './types';
 import './index.css';
 
 // Tab类型
@@ -23,6 +24,14 @@ const App: React.FC = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [playerToDelete, setPlayerToDelete] = useState<{teamId: string; playerId: string; playerInfo: Player} | null>(null);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
+  
+  // 实时协作相关状态
+  const [user] = useState<User>(() => ({
+    id: `user_${Math.random().toString(36).substring(2, 10)}`,
+    name: `计分员${Math.random().toString(36).substring(2, 4).toUpperCase()}`
+  }));
+  const [collaborativeSessionId, setCollaborativeSessionId] = useState<string | null>(null);
+  const [showCollaborativePanel, setShowCollaborativePanel] = useState(false);
   
   // 球员库状态管理 - 从localStorage加载初始数据
   const [savedPlayers, setSavedPlayers] = useState<Player[]>(() => {
@@ -194,6 +203,21 @@ const App: React.FC = () => {
     });
   };
 
+  // 处理协作会话变化
+  const handleSessionChange = (sessionId: string | null) => {
+    setCollaborativeSessionId(sessionId);
+    if (sessionId) {
+      console.log('已加入协作会话:', sessionId);
+    } else {
+      console.log('已离开协作会话');
+    }
+  };
+
+  // 切换协作面板显示
+  const toggleCollaborativePanel = () => {
+    setShowCollaborativePanel(!showCollaborativePanel);
+  };
+
   // 添加球员模态框组件
   const AddPlayerModal: React.FC = () => {
     const [name, setName] = useState('');
@@ -324,6 +348,17 @@ const App: React.FC = () => {
         
         return (
           <div className="space-y-4">
+            {/* 协作面板 */}
+            {showCollaborativePanel && (
+              <div className="bg-white rounded-lg shadow-sm border">
+                <CollaborativeGameManager
+                  user={user}
+                  initialGameState={gameState}
+                  onSessionChange={handleSessionChange}
+                />
+              </div>
+            )}
+
             {/* 顶部：计分板和计时器 */}
             <div className="bg-gradient-to-r from-blue-600 to-red-600 rounded-lg p-4 text-white">
               <div className="grid grid-cols-3 gap-8 items-center">
@@ -421,8 +456,33 @@ const App: React.FC = () => {
             <h1 className="text-2xl font-bold text-gray-900">
               🏀 篮球计分器
             </h1>
-            <div className="text-sm text-gray-600">
-              {gameState.homeTeam.score} - {gameState.awayTeam.score}
+            
+            <div className="flex items-center space-x-4">
+              {/* 协作状态指示器 */}
+              {collaborativeSessionId && (
+                <div className="flex items-center space-x-2 text-green-600 text-sm">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>协作模式</span>
+                  <span className="font-mono text-xs">{collaborativeSessionId}</span>
+                </div>
+              )}
+              
+              {/* 协作按钮 */}
+              <button
+                onClick={toggleCollaborativePanel}
+                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                  collaborativeSessionId 
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                }`}
+              >
+                {collaborativeSessionId ? '🔗 已连接' : '🔗 协作'}
+              </button>
+              
+              {/* 比分显示 */}
+              <div className="text-sm text-gray-600">
+                {gameState.homeTeam.score} - {gameState.awayTeam.score}
+              </div>
             </div>
           </div>
         </div>

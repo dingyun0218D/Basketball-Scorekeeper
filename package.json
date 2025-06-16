@@ -6,6 +6,7 @@
   "description": "一个功能完善的篮球计分器应用程序",
   "scripts": {
     "dev": "vite",
+    "start": "vite",
     "build": "tsc && vite build",
     "build:ci": "vite build --mode production",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 1",
@@ -13,6 +14,7 @@
   },
   "dependencies": {
     "clsx": "^2.0.0",
+    "firebase": "^11.9.1",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

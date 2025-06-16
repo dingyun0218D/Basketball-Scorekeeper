@@ -13,8 +13,9 @@ export const ArchiveViewer: React.FC<ArchiveViewerProps> = ({
   archiveName,
   onClose
 }) => {
-  const formatDateTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString('zh-CN');
+  const formatDateTime = (timestamp: number | Date) => {
+    const date = typeof timestamp === 'number' ? new Date(timestamp) : timestamp;
+    return date.toLocaleString('zh-CN');
   };
 
   // 统计函数暂时未使用，但保留以备将来使用

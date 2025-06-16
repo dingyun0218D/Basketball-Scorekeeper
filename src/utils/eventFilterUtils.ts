@@ -49,9 +49,12 @@ export const filterEvents = (events: GameEvent[], filter: EventFilter): GameEven
 // 排序事件
 export const sortEvents = (events: GameEvent[], sortOrder: 'asc' | 'desc'): GameEvent[] => {
   return [...events].sort((a, b) => {
+    const aTime = typeof a.timestamp === 'number' ? a.timestamp : a.timestamp.getTime();
+    const bTime = typeof b.timestamp === 'number' ? b.timestamp : b.timestamp.getTime();
+    
     return sortOrder === 'desc' 
-      ? b.timestamp - a.timestamp 
-      : a.timestamp - b.timestamp;
+      ? bTime - aTime 
+      : aTime - bTime;
   });
 };
 
