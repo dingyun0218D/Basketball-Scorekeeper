@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Team, Player } from '../../types';
-import { SimplePlayerCard } from './SimplePlayerCard';
+import { CompactPlayerListItem } from './CompactPlayerListItem';
+import { CompactPlayerListHeader } from './CompactPlayerListHeader';
 import { PlayerSelectionModal } from '../PlayerManagement';
 
 interface TeamPlayerAreaProps {
@@ -52,16 +53,20 @@ export const TeamPlayerArea: React.FC<TeamPlayerAreaProps> = ({
           </button>
         </div>
         
-        {/* 球员网格 - 响应式布局 */}
+        {/* 球员列表 */}
         {team.players.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <p>暂无球员</p>
             <p className="text-sm mt-1">点击上方按钮添加球员</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
+          <div className="space-y-1">
+            {/* 列表头部 */}
+            <CompactPlayerListHeader />
+            
+            {/* 球员列表项 */}
             {team.players.slice(0, maxPlayersToShow).map(player => (
-              <SimplePlayerCard
+              <CompactPlayerListItem
                 key={player.id}
                 player={player}
                 teamColor={team.color}

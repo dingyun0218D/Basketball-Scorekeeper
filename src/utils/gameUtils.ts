@@ -113,9 +113,14 @@ export const validateTeamName = (name: string): boolean => {
   return name.trim().length >= 2 && name.trim().length <= 20;
 };
 
-// 验证球员号码
+// 验证球员号码（用于球员管理，不允许重复）
 export const validatePlayerNumber = (number: number, existingNumbers: number[]): boolean => {
   return number >= 0 && number <= 99 && !existingNumbers.includes(number);
+};
+
+// 验证球员号码（用于球员库，允许重复）
+export const validatePlayerNumberForLibrary = (number: number): boolean => {
+  return number >= 0 && number <= 99;
 };
 
 // 格式化得分显示

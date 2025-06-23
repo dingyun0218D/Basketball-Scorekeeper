@@ -237,10 +237,10 @@ export const generateFunEventDescription = (event: GameEvent, gameState: GameSta
 
     case 'turnover': {
       const baseDescription = `${playerName}出现失误，${teamName}丢掉球权`;
-      const comment = getRandomComment(turnoverComments);
-      return `${baseDescription}！${comment}`;
-    }
-
+        const comment = getRandomComment(turnoverComments);
+        return `${baseDescription}！${comment}`;
+      }
+      
     case 'undo': {
       const baseDescription = event.stat === 'score' 
         ? `${playerName}撤销${Math.abs(event.points || 0)}分得分，${teamName}分数调整`

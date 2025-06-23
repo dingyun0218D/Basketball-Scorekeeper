@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Player } from '../../types';
-import { createDefaultPlayer, validatePlayerNumber } from '../../utils/gameUtils';
+import { createDefaultPlayer, validatePlayerNumber, validatePlayerNumberForLibrary } from '../../utils/gameUtils';
 
 interface AddPlayerFormProps {
   teamColor: string;
@@ -20,7 +20,7 @@ export const AddPlayerForm: React.FC<AddPlayerFormProps> = ({
   const [position, setPosition] = useState('PG');
   const [errors, setErrors] = useState<{[key: string]: string}>({});
 
-  const validateForm = () => {
+  const validateForm = (isForLibrary: boolean = false) => {
     const newErrors: {[key: string]: string} = {};
     
     if (!name.trim()) {
@@ -30,8 +30,16 @@ export const AddPlayerForm: React.FC<AddPlayerFormProps> = ({
     const playerNumber = parseInt(number);
     if (!number || isNaN(playerNumber)) {
       newErrors.number = '请输入有效的号码';
-    } else if (!validatePlayerNumber(playerNumber, existingNumbers)) {
-      newErrors.number = '号码无效或已存在';
+    } else if (isForLibrary) {
+      // 保存到球员库时，只验证号码范围，允许重复
+      if (!validatePlayerNumberForLibrary(playerNumber)) {
+        newErrors.number = '号码必须在0-99之间';
+      }
+    } else {
+      // 加入队伍时，验证号码范围和重复性
+      if (!validatePlayerNumber(playerNumber, existingNumbers)) {
+        newErrors.number = '号码无效或已存在';
+      }
     }
     
     setErrors(newErrors);
@@ -41,7 +49,7 @@ export const AddPlayerForm: React.FC<AddPlayerFormProps> = ({
   const handleAddToTeam = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateForm(false)) return;
     
     const newPlayer = createDefaultPlayer(name.trim(), parseInt(number), position);
     onAddPlayer(newPlayer);
@@ -56,7 +64,7 @@ export const AddPlayerForm: React.FC<AddPlayerFormProps> = ({
   const handleSaveToLibrary = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateForm(true)) return;
     
     const newPlayer = createDefaultPlayer(name.trim(), parseInt(number), position);
     onSavePlayer(newPlayer);
@@ -156,7 +164,9 @@ export const AddPlayerForm: React.FC<AddPlayerFormProps> = ({
         <ul className="text-sm text-gray-600 space-y-1">
           <li>• <strong>直接加入队伍</strong>：创建球员并立即添加到当前队伍</li>
           <li>• <strong>保存到球员库</strong>：将球员保存到球员库，可在其他比赛中重复使用</li>
-          <li>• 球员号码必须在0-99之间且不能重复</li>
+          <li>• <strong>号码规则</strong>：球员号码必须在0-99之间</li>
+          <li>• <strong>队伍管理</strong>：同一队伍中不能有重复号码</li>
+          <li>• <strong>球员库</strong>：球员库中允许存在相同号码的不同球员</li>
         </ul>
       </div>
     </div>

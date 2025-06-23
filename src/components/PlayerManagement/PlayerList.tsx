@@ -108,7 +108,9 @@ export const PlayerList: React.FC<PlayerListProps> = ({
           <ul className="text-sm text-blue-700 space-y-1">
             <li>• 点击球员行可将球员添加到当前队伍</li>
             <li>• 使用搜索框快速查找球员</li>
-            <li>• 红色背景表示号码冲突，需要修改号码</li>
+            <li>• 红色背景表示号码冲突，需要修改球员号码或选择其他球员</li>
+            <li>• 球员库中允许存在相同号码的不同球员</li>
+            <li>• 同一队伍中不能有相同号码的球员</li>
             <li>• 可以编辑球员信息后重新保存</li>
           </ul>
         </div>

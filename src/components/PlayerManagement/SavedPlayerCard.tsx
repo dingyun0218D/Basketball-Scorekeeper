@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Player } from '../../types';
+import { validatePlayerNumberForLibrary } from '../../utils/gameUtils';
 
 interface SavedPlayerCardProps {
   player: Player;
@@ -22,6 +23,17 @@ export const SavedPlayerCard: React.FC<SavedPlayerCardProps> = ({
   const [editedPlayer, setEditedPlayer] = useState(player);
 
   const handleSave = () => {
+    // 验证编辑后的球员信息
+    if (!editedPlayer.name.trim()) {
+      alert('请输入球员姓名');
+      return;
+    }
+    
+    if (!validatePlayerNumberForLibrary(editedPlayer.number)) {
+      alert('球员号码必须在0-99之间');
+      return;
+    }
+    
     onSave(editedPlayer);
     setIsEditing(false);
   };

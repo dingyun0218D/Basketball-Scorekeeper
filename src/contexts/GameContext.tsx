@@ -10,6 +10,8 @@ import { createSubstitutionEvent, togglePlayerCourtStatus, canPlayerEnterCourt }
 import { createQuarterEndEvent } from '../utils/quarterEventUtils';
 import { createShotAttemptEvent, updateTeamPlayerShotStats } from '../utils/shotEventUtils';
 import { canUndoScore, undoPlayerScoreStats } from '../utils/undoEventUtils';
+import { addPlayerToTeam, removePlayerFromTeam } from '../utils/playerManagementUtils';
+import { batchSyncPlayerInfo } from '../utils/playerSyncUtils';
 
 // Action types
 type GameAction =
@@ -35,6 +37,7 @@ type GameAction =
   | { type: 'UPDATE_TEAM'; payload: { teamId: string; updates: Partial<Team> } }
   | { type: 'ADD_PLAYER'; payload: { teamId: string; player: Player } }
   | { type: 'REMOVE_PLAYER'; payload: { teamId: string; playerId: string } }
+  | { type: 'SYNC_PLAYER_INFO'; payload: { originalPlayer: Player; updatedPlayer: Player } }
   | { type: 'RESET_GAME' };
 
 // Initial state
@@ -83,9 +86,25 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       };
 
     case 'SYNC_COLLABORATIVE_STATE':
-      // 同步协作状态，不触发自动保存
+      // 同步协作状态，只有当协作状态更新时间较新时才覆盖本地状态
+      const collaborativeUpdatedAt = action.payload.updatedAt || 0;
+      const localUpdatedAt = state.updatedAt || 0;
+      
+      // 如果协作状态更新时间不比本地状态新，则不同步
+      if (collaborativeUpdatedAt <= localUpdatedAt) {
+        return state;
+      }
+      
+      console.log('协作状态同步：覆盖本地状态', {
+        collaborative: collaborativeUpdatedAt,
+        local: localUpdatedAt
+      });
+      
       return {
         ...action.payload,
+        // 保持会话相关信息
+        sessionId: action.payload.sessionId || state.sessionId,
+        activeUsers: action.payload.activeUsers || state.activeUsers,
       };
 
     case 'START_NEW_GAME':
@@ -361,10 +380,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       const isHomeTeam = teamId === state.homeTeam.id;
       const team = isHomeTeam ? state.homeTeam : state.awayTeam;
       
-      const updatedTeam = {
-        ...team,
-        players: [...team.players, player],
-      };
+      const updatedTeam = addPlayerToTeam(team, player);
 
       return {
         ...state,
@@ -379,15 +395,37 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       const isHomeTeam = teamId === state.homeTeam.id;
       const team = isHomeTeam ? state.homeTeam : state.awayTeam;
       
-      const updatedTeam = {
-        ...team,
-        players: team.players.filter(player => player.id !== playerId),
-      };
+      const updatedTeam = removePlayerFromTeam(team, playerId);
 
       return {
         ...state,
         homeTeam: isHomeTeam ? updatedTeam : state.homeTeam,
         awayTeam: isHomeTeam ? state.awayTeam : updatedTeam,
+        updatedAt: Date.now(),
+      };
+    }
+
+    case 'SYNC_PLAYER_INFO': {
+      const { originalPlayer, updatedPlayer } = action.payload;
+      
+      // 批量同步两个队伍中的球员信息
+      const teams = [state.homeTeam, state.awayTeam];
+      const syncResult = batchSyncPlayerInfo(teams, originalPlayer, updatedPlayer);
+      
+      // 如果有球员因为号码冲突被移除，在控制台记录信息
+      if (syncResult.allRemovedPlayers.length > 0) {
+        console.warn('球员同步过程中发现号码冲突，以下球员已被移除：', syncResult.allRemovedPlayers);
+      }
+      
+      // 如果有球员被同步，在控制台记录信息
+      if (syncResult.totalSyncedCount > 0) {
+        console.log(`球员信息同步完成，共更新了 ${syncResult.totalSyncedCount} 个球员实例`);
+      }
+
+      return {
+        ...state,
+        homeTeam: syncResult.updatedTeams[0] || state.homeTeam,
+        awayTeam: syncResult.updatedTeams[1] || state.awayTeam,
         updatedAt: Date.now(),
       };
     }

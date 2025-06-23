@@ -9,4 +9,6 @@ export { OnCourtArea } from './OnCourtArea';
 export { OnCourtPlayerCard } from './OnCourtPlayerCard';
 export { OnCourtPlayerInfo } from './OnCourtPlayerInfo';
 export { DraggablePlayerCard } from './DraggablePlayerCard';
-export { CompactPlayerCard } from './CompactPlayerCard'; 
+export { CompactPlayerCard } from './CompactPlayerCard';
+export { CompactPlayerListItem } from './CompactPlayerListItem';
+export { CompactPlayerListHeader } from './CompactPlayerListHeader'; 

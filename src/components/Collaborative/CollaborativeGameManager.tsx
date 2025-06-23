@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { useCollaborativeGame } from '../../hooks/useCollaborativeGame';
 import { GameState, User } from '../../types';
 import { GameContext } from '../../contexts/GameContext';
@@ -9,6 +9,23 @@ interface CollaborativeGameManagerProps {
   onSessionChange?: (sessionId: string | null) => void;
 }
 
+// 防抖函数
+const useDebounce = (value: any, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   user,
   initialGameState,
@@ -17,12 +34,16 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   const [mode, setMode] = useState<'select' | 'create' | 'join'>('select');
   const [joinSessionId, setJoinSessionId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const lastSyncTime = useRef<number>(0);
   
   const gameContext = useContext(GameContext);
   if (!gameContext) {
     throw new Error('CollaborativeGameManager 必须在 GameProvider 内使用');
   }
   const { gameState: localGameState, dispatch } = gameContext;
+  
+  // 对本地状态进行防抖处理
+  const debouncedLocalGameState = useDebounce(localGameState, 500);
   
   const {
     gameState: collaborativeGameState,
@@ -32,6 +53,7 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
     sessionId,
     createSession,
     joinSession,
+    updateGameState,
     leaveSession,
     error
   } = useCollaborativeGame({
@@ -47,10 +69,48 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   // 同步协作状态到本地状态
   useEffect(() => {
     if (collaborativeGameState && isConnected) {
-      // 将协作状态同步到本地 Context
-      dispatch({ type: 'SYNC_COLLABORATIVE_STATE', payload: collaborativeGameState });
+      const collaborativeTime = typeof collaborativeGameState.updatedAt === 'number' 
+        ? collaborativeGameState.updatedAt 
+        : (collaborativeGameState.updatedAt ? new Date(collaborativeGameState.updatedAt).getTime() : 0);
+      const localTime = typeof localGameState?.updatedAt === 'number' 
+        ? localGameState.updatedAt 
+        : (localGameState?.updatedAt ? new Date(localGameState.updatedAt).getTime() : 0);
+      
+      // 只有当协作状态更新时间更新时才同步
+      if (collaborativeTime > localTime && collaborativeTime > lastSyncTime.current) {
+        console.log('同步协作状态到本地状态', {
+          collaborativeTime,
+          localTime,
+          lastSync: lastSyncTime.current
+        });
+        lastSyncTime.current = collaborativeTime;
+        dispatch({ type: 'SYNC_COLLABORATIVE_STATE', payload: collaborativeGameState });
+      }
     }
-  }, [collaborativeGameState, isConnected, dispatch]);
+  }, [collaborativeGameState, isConnected, dispatch, localGameState]);
+
+  // 同步本地状态到协作状态（使用防抖后的状态）
+  useEffect(() => {
+    if (isConnected && sessionId && debouncedLocalGameState) {
+      const localTime = typeof debouncedLocalGameState.updatedAt === 'number' 
+        ? debouncedLocalGameState.updatedAt 
+        : (debouncedLocalGameState.updatedAt ? new Date(debouncedLocalGameState.updatedAt).getTime() : 0);
+      const collaborativeTime = typeof collaborativeGameState?.updatedAt === 'number' 
+        ? collaborativeGameState.updatedAt 
+        : (collaborativeGameState?.updatedAt ? new Date(collaborativeGameState.updatedAt).getTime() : 0);
+      
+      // 只有当本地状态更新时间更新时才同步
+      if (localTime > collaborativeTime && localTime > lastSyncTime.current) {
+        console.log('同步本地状态到协作状态', {
+          localTime,
+          collaborativeTime,
+          lastSync: lastSyncTime.current
+        });
+        lastSyncTime.current = localTime;
+        updateGameState(debouncedLocalGameState);
+      }
+    }
+  }, [debouncedLocalGameState, isConnected, sessionId, updateGameState, collaborativeGameState]);
 
   // 处理创建新会话
   const handleCreateSession = async () => {
