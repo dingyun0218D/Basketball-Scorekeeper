@@ -85,7 +85,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
         updatedAt: Date.now(), // 更新时间戳以触发自动保存
       };
 
-    case 'SYNC_COLLABORATIVE_STATE':
+    case 'SYNC_COLLABORATIVE_STATE': {
       // 同步协作状态，只有当协作状态更新时间较新时才覆盖本地状态
       const collaborativeUpdatedAt = action.payload.updatedAt || 0;
       const localUpdatedAt = state.updatedAt || 0;
@@ -106,6 +106,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
         sessionId: action.payload.sessionId || state.sessionId,
         activeUsers: action.payload.activeUsers || state.activeUsers,
       };
+    }
 
     case 'START_NEW_GAME':
       return {

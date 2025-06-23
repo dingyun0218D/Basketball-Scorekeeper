@@ -1,5 +1,4 @@
 import { Team, Player } from '../types';
-import { hasNumberConflict } from './playerManagementUtils';
 
 /**
  * 查找队伍中具有指定源ID的球员
@@ -8,7 +7,7 @@ import { hasNumberConflict } from './playerManagementUtils';
  * @param sourcePlayerId 球员库中的球员ID
  * @returns 找到的球员数组（可能有多个实例）
  */
-export const findPlayersBySourceId = (team: Team, sourcePlayerId: string): Player[] => {
+export const findPlayersBySourceId = (team: Team, _sourcePlayerId: string): Player[] => {
   // 这里需要一个机制来追踪球员的源ID
   // 由于当前没有sourceId字段，我们先按姓名匹配
   // 在实际实现中，建议在Player接口中添加sourceId字段
@@ -114,7 +113,7 @@ export const syncPlayerBasicInfo = (
  * 为Player接口添加源ID追踪的辅助函数
  * 用于将来的优化，当Player接口添加sourceId字段时使用
  */
-export const createPlayerWithSourceId = (basePlayer: Player, sourceId: string): Player => {
+export const createPlayerWithSourceId = (basePlayer: Player, _sourceId: string): Player => {
   // 这是为将来扩展预留的函数
   // 当Player接口添加sourceId字段时，可以使用这个函数
   return {

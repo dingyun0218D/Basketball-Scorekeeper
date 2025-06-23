@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useCollaborativeGame } from '../../hooks/useCollaborativeGame';
 import { GameState, User } from '../../types';
 import { GameContext } from '../../contexts/GameContext';
@@ -10,7 +10,7 @@ interface CollaborativeGameManagerProps {
 }
 
 // 防抖函数
-const useDebounce = (value: any, delay: number) => {
+const useDebounce = (value: GameState | null, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
   useEffect(() => {
