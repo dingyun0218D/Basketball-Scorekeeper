@@ -35,6 +35,7 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   const [joinSessionId, setJoinSessionId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const lastSyncTime = useRef<number>(0);
+  const isSyncing = useRef<boolean>(false);
   
   const gameContext = useContext(GameContext);
   if (!gameContext) {
@@ -42,8 +43,11 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   }
   const { gameState: localGameState, dispatch } = gameContext;
   
-  // 对本地状态进行防抖处理
-  const debouncedLocalGameState = useDebounce(localGameState, 500);
+  // 对本地状态进行防抖处理，但只在非同步状态下
+  const debouncedLocalGameState = useDebounce(
+    isSyncing.current ? null : localGameState, 
+    300
+  );
   
   const {
     gameState: collaborativeGameState,
@@ -68,7 +72,7 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
 
   // 同步协作状态到本地状态
   useEffect(() => {
-    if (collaborativeGameState && isConnected) {
+    if (collaborativeGameState && isConnected && !isSyncing.current) {
       const collaborativeTime = typeof collaborativeGameState.updatedAt === 'number' 
         ? collaborativeGameState.updatedAt 
         : (collaborativeGameState.updatedAt ? new Date(collaborativeGameState.updatedAt).getTime() : 0);
@@ -76,22 +80,29 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
         ? localGameState.updatedAt 
         : (localGameState?.updatedAt ? new Date(localGameState.updatedAt).getTime() : 0);
       
-      // 只有当协作状态更新时间更新时才同步
+      // 只有当协作状态更新时间更新时才同步，避免自己的更新被覆盖
       if (collaborativeTime > localTime && collaborativeTime > lastSyncTime.current) {
         console.log('同步协作状态到本地状态', {
           collaborativeTime,
           localTime,
-          lastSync: lastSyncTime.current
+          lastSync: lastSyncTime.current,
+          user: user.id
         });
+        isSyncing.current = true;
         lastSyncTime.current = collaborativeTime;
         dispatch({ type: 'SYNC_COLLABORATIVE_STATE', payload: collaborativeGameState });
+        
+        // 短暂延迟后重置同步标志
+        setTimeout(() => {
+          isSyncing.current = false;
+        }, 100);
       }
     }
-  }, [collaborativeGameState, isConnected, dispatch, localGameState]);
+  }, [collaborativeGameState, isConnected, dispatch, localGameState, user.id]);
 
   // 同步本地状态到协作状态（使用防抖后的状态）
   useEffect(() => {
-    if (isConnected && sessionId && debouncedLocalGameState) {
+    if (isConnected && sessionId && debouncedLocalGameState && !isSyncing.current) {
       const localTime = typeof debouncedLocalGameState.updatedAt === 'number' 
         ? debouncedLocalGameState.updatedAt 
         : (debouncedLocalGameState.updatedAt ? new Date(debouncedLocalGameState.updatedAt).getTime() : 0);
@@ -99,18 +110,19 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
         ? collaborativeGameState.updatedAt 
         : (collaborativeGameState?.updatedAt ? new Date(collaborativeGameState.updatedAt).getTime() : 0);
       
-      // 只有当本地状态更新时间更新时才同步
+      // 只有当本地状态更新时间更新时才同步，并确保是用户主动操作
       if (localTime > collaborativeTime && localTime > lastSyncTime.current) {
         console.log('同步本地状态到协作状态', {
           localTime,
           collaborativeTime,
-          lastSync: lastSyncTime.current
+          lastSync: lastSyncTime.current,
+          user: user.id
         });
         lastSyncTime.current = localTime;
         updateGameState(debouncedLocalGameState);
       }
     }
-  }, [debouncedLocalGameState, isConnected, sessionId, updateGameState, collaborativeGameState]);
+  }, [debouncedLocalGameState, isConnected, sessionId, updateGameState, collaborativeGameState, user.id]);
 
   // 处理创建新会话
   const handleCreateSession = async () => {
@@ -146,6 +158,8 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
 
   // 处理离开会话
   const handleLeaveSession = () => {
+    isSyncing.current = false;
+    lastSyncTime.current = 0;
     leaveSession();
     setMode('select');
   };
