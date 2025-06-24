@@ -1,18 +1,34 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Firebase 配置 - 使用环境变量
 const firebaseConfig = {
-    apiKey: "AIzaSyAxIJaceNu4-D-604gteRDgnbJn4iuq1lY",
-    authDomain: "basketball-scorekeeper-e4039.firebaseapp.com",
-    projectId: "basketball-scorekeeper-e4039",
-    storageBucket: "basketball-scorekeeper-e4039.firebasestorage.app",
-    messagingSenderId: "114829273033",
-    appId: "1:114829273033:web:a7797f88585557ccfe2a18",
-    measurementId: "G-7GXYETN55Q"
-  };
-  
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+};
+
+// 验证必要的环境变量
+const requiredEnvVars = [
+  'VITE_FIREBASE_API_KEY',
+  'VITE_FIREBASE_AUTH_DOMAIN', 
+  'VITE_FIREBASE_PROJECT_ID',
+  'VITE_FIREBASE_STORAGE_BUCKET',
+  'VITE_FIREBASE_MESSAGING_SENDER_ID',
+  'VITE_FIREBASE_APP_ID'
+];
+
+const missingEnvVars = requiredEnvVars.filter(varName => !import.meta.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.error('缺少必要的 Firebase 环境变量:', missingEnvVars);
+  throw new Error(`Firebase 配置错误: 缺少环境变量 ${missingEnvVars.join(', ')}`);
+}
+
 // 初始化 Firebase
 const app = initializeApp(firebaseConfig);
 
