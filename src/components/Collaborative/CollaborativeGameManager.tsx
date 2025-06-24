@@ -79,7 +79,6 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   useEffect(() => {
     if (collaborativeGameState && isConnected && localGameState) {
       const collaborativeTime = normalizeTimestamp(collaborativeGameState.updatedAt);
-      const localTime = normalizeTimestamp(localGameState.updatedAt);
       
       // 使用改进的时间戳比较逻辑
       if (shouldSyncRemoteState(localGameState.updatedAt, collaborativeGameState.updatedAt) && 
@@ -100,7 +99,6 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   useEffect(() => {
     if (isConnected && sessionId && debouncedLocalGameState) {
       const localTime = normalizeTimestamp(debouncedLocalGameState.updatedAt);
-      const collaborativeTime = normalizeTimestamp(collaborativeGameState?.updatedAt);
       
       // 使用改进的推送逻辑
       if (shouldPushLocalState(

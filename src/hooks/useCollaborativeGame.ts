@@ -109,7 +109,7 @@ export const useCollaborativeGame = ({
           [user.id]: new Date()
         },
         // 移除本地时间戳，让服务器设置
-        updatedAt: undefined as any
+        updatedAt: undefined as unknown as number
       };
 
       await firestoreService.updateGameState(sessionId, stateWithUserActivity);

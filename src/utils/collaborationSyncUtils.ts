@@ -18,7 +18,7 @@ export const normalizeTimestamp = (time: number | Date | undefined): number => {
   }
   if (time && typeof time === 'object' && 'toDate' in time) {
     // Firestore Timestamp 对象
-    return (time as any).toDate().getTime();
+    return (time as { toDate: () => Date }).toDate().getTime();
   }
   return 0;
 };
