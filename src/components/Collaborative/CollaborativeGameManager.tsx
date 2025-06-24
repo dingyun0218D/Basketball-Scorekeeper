@@ -10,29 +10,13 @@ import {
   logSyncOperation,
   normalizeTimestamp
 } from '../../utils/collaborationSyncUtils';
+import { useCollaborativeDebounce, isTimerOnlyUpdate } from '../../hooks/useCollaborativeDebounce';
 
 interface CollaborativeGameManagerProps {
   user: User;
   initialGameState?: GameState;
   onSessionChange?: (sessionId: string | null) => void;
 }
-
-// 防抖函数
-const useDebounce = (value: GameState | null, delay: number) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
-};
 
 const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   user,
@@ -51,8 +35,8 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   }
   const { gameState: localGameState, dispatch } = gameContext;
   
-  // 对本地状态进行防抖处理
-  const debouncedLocalGameState = useDebounce(localGameState, 500);
+  // 使用智能防抖处理，过滤纯计时器更新
+  const debouncedLocalGameState = useCollaborativeDebounce(localGameState, 500, isTimerOnlyUpdate);
   
   const {
     gameState: collaborativeGameState,
@@ -95,7 +79,7 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
     }
   }, [collaborativeGameState, isConnected, dispatch, localGameState]);
 
-  // 同步本地状态到协作状态（使用防抖后的状态）
+  // 同步本地状态到协作状态（使用智能防抖后的状态）
   useEffect(() => {
     if (isConnected && sessionId && debouncedLocalGameState) {
       const localTime = normalizeTimestamp(debouncedLocalGameState.updatedAt);

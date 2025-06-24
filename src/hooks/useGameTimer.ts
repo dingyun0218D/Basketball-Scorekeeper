@@ -13,7 +13,7 @@ export const useGameTimer = () => {
         
         if (currentSeconds > 0) {
           const newTime = formatTime(currentSeconds - 1);
-          dispatch({ type: 'UPDATE_TIME', payload: { time: newTime } });
+          dispatch({ type: 'UPDATE_TIMER_TIME', payload: { time: newTime } });
         } else {
           // 时间到，自动暂停
           dispatch({ type: 'PAUSE_TIMER' });

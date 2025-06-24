@@ -12,6 +12,7 @@ import { createShotAttemptEvent, updateTeamPlayerShotStats } from '../utils/shot
 import { canUndoScore, undoPlayerScoreStats } from '../utils/undoEventUtils';
 import { addPlayerToTeam, removePlayerFromTeam } from '../utils/playerManagementUtils';
 import { batchSyncPlayerInfo } from '../utils/playerSyncUtils';
+import { updateTimerTime, updateTimerControl } from '../utils/timerUtils';
 
 // Action types
 type GameAction =
@@ -32,6 +33,7 @@ type GameAction =
   | { type: 'RESUME_TIMER' }
   | { type: 'STOP_TIMER' }
   | { type: 'UPDATE_TIME'; payload: { time: string } }
+  | { type: 'UPDATE_TIMER_TIME'; payload: { time: string } }
   | { type: 'NEXT_QUARTER' }
   | { type: 'ADD_EVENT'; payload: GameEvent }
   | { type: 'UPDATE_TEAM'; payload: { teamId: string; updates: Partial<Team> } }
@@ -310,25 +312,27 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       };
 
     case 'START_TIMER':
-      return { ...state, isRunning: true, isPaused: false };
+      return updateTimerControl(state, { isRunning: true, isPaused: false });
 
     case 'PAUSE_TIMER':
-      return { ...state, isRunning: false, isPaused: true };
+      return updateTimerControl(state, { isRunning: false, isPaused: true });
 
     case 'RESUME_TIMER':
-      return { ...state, isRunning: true, isPaused: false };
+      return updateTimerControl(state, { isRunning: true, isPaused: false });
 
     case 'STOP_TIMER':
-      return { 
-        ...state, 
+      return updateTimerControl(state, { 
         isRunning: false, 
         isPaused: false,
-        time: state.quarterTime, // 重置时间到设置的每节时长
-        updatedAt: Date.now()
-      };
+        time: state.quarterTime // 重置时间到设置的每节时长
+      });
 
     case 'UPDATE_TIME':
       return { ...state, time: action.payload.time, updatedAt: Date.now() };
+
+    case 'UPDATE_TIMER_TIME':
+      // 计时器运行时的纯时间更新，不触发协作同步
+      return updateTimerTime(state, action.payload.time);
 
     case 'NEXT_QUARTER': {
       const event = createQuarterEndEvent(state.quarter, state.time);
