@@ -86,7 +86,7 @@ export const PlayerSyncConfirmModal: React.FC<PlayerSyncConfirmModalProps> = ({
                 号码冲突警告
               </h4>
               <p className="text-sm text-red-700 mb-2">
-                新号码 #{updatedPlayer.number} 与以下球员冲突：
+                新号码 #{updatedPlayer.number} 与同队球员冲突
               </p>
               <div className="space-y-1">
                 {conflictInfo.conflictingPlayers.map((conflict, index) => (
