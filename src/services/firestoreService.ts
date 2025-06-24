@@ -32,8 +32,14 @@ export class FirestoreService {
   // 更新游戏状态
   async updateGameState(sessionId: string, gameState: GameState): Promise<void> {
     const gameDoc = doc(db, this.gameCollection, sessionId);
+    
+    // 创建要更新的数据，移除可能存在的 Firestore 特定字段
+    const { activeUsers, ...updateData } = gameState;
+    
     await updateDoc(gameDoc, {
-      ...gameState,
+      ...updateData,
+      // 保持用户活动状态的更新
+      activeUsers: activeUsers || {},
       updatedAt: serverTimestamp(),
       lastActiveAt: serverTimestamp()
     });

@@ -71,7 +71,6 @@ export interface GameState {
   sessionId?: string; // 会话ID
   activeUsers?: { [userId: string]: Date | number }; // 活跃用户及其最后活动时间
   lastActiveAt?: Date | number; // 最后活动时间
-  lastUpdatedBy?: string; // 最后更新的用户ID，用于避免同步冲突
 }
 
 // 计分按钮类型

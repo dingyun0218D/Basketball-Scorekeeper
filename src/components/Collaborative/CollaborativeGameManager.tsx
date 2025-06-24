@@ -2,6 +2,14 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useCollaborativeGame } from '../../hooks/useCollaborativeGame';
 import { GameState, User } from '../../types';
 import { GameContext } from '../../contexts/GameContext';
+import { ConfirmModal } from '../common/ConfirmModal';
+import { 
+  shouldSyncRemoteState, 
+  shouldPushLocalState, 
+  mergeGameStates, 
+  logSyncOperation,
+  normalizeTimestamp
+} from '../../utils/collaborationSyncUtils';
 
 interface CollaborativeGameManagerProps {
   user: User;
@@ -34,8 +42,8 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   const [mode, setMode] = useState<'select' | 'create' | 'join'>('select');
   const [joinSessionId, setJoinSessionId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const lastSyncTime = useRef<number>(0);
-  const isSyncing = useRef<boolean>(false);
   
   const gameContext = useContext(GameContext);
   if (!gameContext) {
@@ -43,11 +51,8 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   }
   const { gameState: localGameState, dispatch } = gameContext;
   
-  // 对本地状态进行防抖处理，但只在非同步状态下
-  const debouncedLocalGameState = useDebounce(
-    isSyncing.current ? null : localGameState, 
-    300
-  );
+  // 对本地状态进行防抖处理
+  const debouncedLocalGameState = useDebounce(localGameState, 500);
   
   const {
     gameState: collaborativeGameState,
@@ -72,57 +77,46 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
 
   // 同步协作状态到本地状态
   useEffect(() => {
-    if (collaborativeGameState && isConnected && !isSyncing.current) {
-      const collaborativeTime = typeof collaborativeGameState.updatedAt === 'number' 
-        ? collaborativeGameState.updatedAt 
-        : (collaborativeGameState.updatedAt ? new Date(collaborativeGameState.updatedAt).getTime() : 0);
-      const localTime = typeof localGameState?.updatedAt === 'number' 
-        ? localGameState.updatedAt 
-        : (localGameState?.updatedAt ? new Date(localGameState.updatedAt).getTime() : 0);
+    if (collaborativeGameState && isConnected && localGameState) {
+      const collaborativeTime = normalizeTimestamp(collaborativeGameState.updatedAt);
+      const localTime = normalizeTimestamp(localGameState.updatedAt);
       
-      // 只有当协作状态更新时间更新时才同步，避免自己的更新被覆盖
-      if (collaborativeTime > localTime && collaborativeTime > lastSyncTime.current) {
-        console.log('同步协作状态到本地状态', {
-          collaborativeTime,
-          localTime,
-          lastSync: lastSyncTime.current,
-          user: user.id
-        });
-        isSyncing.current = true;
-        lastSyncTime.current = collaborativeTime;
-        dispatch({ type: 'SYNC_COLLABORATIVE_STATE', payload: collaborativeGameState });
+      // 使用改进的时间戳比较逻辑
+      if (shouldSyncRemoteState(localGameState.updatedAt, collaborativeGameState.updatedAt) && 
+          collaborativeTime > lastSyncTime.current) {
         
-        // 短暂延迟后重置同步标志
-        setTimeout(() => {
-          isSyncing.current = false;
-        }, 100);
+        logSyncOperation('remote-to-local', localGameState.updatedAt, collaborativeGameState.updatedAt, '远程状态更新');
+        
+        lastSyncTime.current = collaborativeTime;
+        const mergedState = mergeGameStates(localGameState, collaborativeGameState);
+        dispatch({ type: 'SYNC_COLLABORATIVE_STATE', payload: mergedState });
+      } else {
+        logSyncOperation('skip', localGameState.updatedAt, collaborativeGameState.updatedAt, '无需同步远程状态');
       }
     }
-  }, [collaborativeGameState, isConnected, dispatch, localGameState, user.id]);
+  }, [collaborativeGameState, isConnected, dispatch, localGameState]);
 
   // 同步本地状态到协作状态（使用防抖后的状态）
   useEffect(() => {
-    if (isConnected && sessionId && debouncedLocalGameState && !isSyncing.current) {
-      const localTime = typeof debouncedLocalGameState.updatedAt === 'number' 
-        ? debouncedLocalGameState.updatedAt 
-        : (debouncedLocalGameState.updatedAt ? new Date(debouncedLocalGameState.updatedAt).getTime() : 0);
-      const collaborativeTime = typeof collaborativeGameState?.updatedAt === 'number' 
-        ? collaborativeGameState.updatedAt 
-        : (collaborativeGameState?.updatedAt ? new Date(collaborativeGameState.updatedAt).getTime() : 0);
+    if (isConnected && sessionId && debouncedLocalGameState) {
+      const localTime = normalizeTimestamp(debouncedLocalGameState.updatedAt);
+      const collaborativeTime = normalizeTimestamp(collaborativeGameState?.updatedAt);
       
-      // 只有当本地状态更新时间更新时才同步，并确保是用户主动操作
-      if (localTime > collaborativeTime && localTime > lastSyncTime.current) {
-        console.log('同步本地状态到协作状态', {
-          localTime,
-          collaborativeTime,
-          lastSync: lastSyncTime.current,
-          user: user.id
-        });
+      // 使用改进的推送逻辑
+      if (shouldPushLocalState(
+        debouncedLocalGameState.updatedAt, 
+        collaborativeGameState?.updatedAt, 
+        lastSyncTime.current
+      )) {
+        logSyncOperation('local-to-remote', debouncedLocalGameState.updatedAt, collaborativeGameState?.updatedAt, '推送本地状态');
+        
         lastSyncTime.current = localTime;
         updateGameState(debouncedLocalGameState);
+      } else {
+        logSyncOperation('skip', debouncedLocalGameState.updatedAt, collaborativeGameState?.updatedAt, '无需推送本地状态');
       }
     }
-  }, [debouncedLocalGameState, isConnected, sessionId, updateGameState, collaborativeGameState, user.id]);
+  }, [debouncedLocalGameState, isConnected, sessionId, updateGameState, collaborativeGameState]);
 
   // 处理创建新会话
   const handleCreateSession = async () => {
@@ -158,48 +152,76 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
 
   // 处理离开会话
   const handleLeaveSession = () => {
-    isSyncing.current = false;
-    lastSyncTime.current = 0;
+    setShowLeaveConfirm(true);
+  };
+
+  // 确认离开会话
+  const confirmLeaveSession = () => {
     leaveSession();
     setMode('select');
+    setShowLeaveConfirm(false);
+  };
+
+  // 取消离开会话
+  const cancelLeaveSession = () => {
+    setShowLeaveConfirm(false);
   };
 
   // 如果已连接，显示连接状态
   if (isConnected && sessionId) {
     return (
-      <div className="collaborative-game-manager p-4 border rounded-lg bg-green-50">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-green-800">
-              实时协作模式 {isHost && '(主机)'}
-            </h3>
-            <p className="text-green-600">会话ID: {sessionId}</p>
-          </div>
-          <button
-            onClick={handleLeaveSession}
-            className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-          >
-            离开会话
-          </button>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-green-700">已连接</span>
+      <>
+        <div className="collaborative-game-manager p-4 border rounded-lg bg-green-50">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-green-800">
+                实时协作模式 {isHost && '(主机)'}
+              </h3>
+              <p className="text-green-600">会话ID: {sessionId}</p>
+            </div>
+            <button
+              onClick={handleLeaveSession}
+              className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              离开会话
+            </button>
           </div>
           
-          <div className="text-sm text-gray-600">
-            在线用户: {connectedUsers.map(u => u.name).join(', ')}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-green-700">已连接</span>
+            </div>
+            
+            <div className="text-sm text-gray-600">
+              在线用户: {connectedUsers.map(u => u.name).join(', ')}
+            </div>
           </div>
+
+          {error && (
+            <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+              {error}
+            </div>
+          )}
         </div>
 
-        {error && (
-          <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-      </div>
+        {/* 离开会话确认弹窗 */}
+        <ConfirmModal
+          isOpen={showLeaveConfirm}
+          title="离开协作会话"
+          message="您确定要离开当前的协作会话吗？"
+          details={[
+            `会话ID：${sessionId}`,
+            `在线用户：${connectedUsers.length}人`,
+            `您的角色：${isHost ? '主机' : '参与者'}`
+          ]}
+          confirmText="离开会话"
+          cancelText="取消"
+          onConfirm={confirmLeaveSession}
+          onCancel={cancelLeaveSession}
+          type="warning"
+        />
+      </>
     );
   }
 

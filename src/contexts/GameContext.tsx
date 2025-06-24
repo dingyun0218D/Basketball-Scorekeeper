@@ -86,20 +86,7 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       };
 
     case 'SYNC_COLLABORATIVE_STATE': {
-      // 同步协作状态，只有当协作状态更新时间较新时才覆盖本地状态
-      const collaborativeUpdatedAt = action.payload.updatedAt || 0;
-      const localUpdatedAt = state.updatedAt || 0;
-      
-      // 如果协作状态更新时间不比本地状态新，则不同步
-      if (collaborativeUpdatedAt <= localUpdatedAt) {
-        return state;
-      }
-      
-      console.log('协作状态同步：覆盖本地状态', {
-        collaborative: collaborativeUpdatedAt,
-        local: localUpdatedAt
-      });
-      
+      // 同步协作状态，使用改进的时间戳比较逻辑
       return {
         ...action.payload,
         // 保持会话相关信息

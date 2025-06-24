@@ -13,6 +13,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   awayTeamScore,
   onToggleCollaborativePanel
 }) => {
+  // 处理协作按钮点击
+  const handleCollaborativeButtonClick = () => {
+    // 如果已连接，则不允许点击
+    if (collaborativeSessionId) {
+      return;
+    }
+    onToggleCollaborativePanel();
+  };
+
   return (
     <header className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,14 +42,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             
             {/* 协作按钮 */}
             <button
-              onClick={collaborativeSessionId ? undefined : onToggleCollaborativePanel}
-              disabled={!!collaborativeSessionId}
+              onClick={handleCollaborativeButtonClick}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                 collaborativeSessionId 
                   ? 'bg-green-100 text-green-700 cursor-default' 
-                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer'
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
               }`}
-              title={collaborativeSessionId ? '请使用"离开会话"按钮退出协作模式' : '点击开始协作'}
+              disabled={!!collaborativeSessionId}
             >
               {collaborativeSessionId ? '🔗 已连接' : '🔗 协作'}
             </button>

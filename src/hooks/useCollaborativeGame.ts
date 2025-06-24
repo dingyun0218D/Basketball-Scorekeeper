@@ -38,15 +38,12 @@ export const useCollaborativeGame = ({
 
   // 用于存储取消订阅函数
   const unsubscribeRefs = useRef<Array<() => void>>([]);
-  // 用于防止更新冲突
-  const isUpdatingRef = useRef(false);
 
   // 清理所有订阅
   const cleanup = useCallback(() => {
     unsubscribeRefs.current.forEach(unsubscribe => unsubscribe());
     unsubscribeRefs.current = [];
     setIsConnected(false);
-    isUpdatingRef.current = false;
   }, []);
 
   // 创建新会话
@@ -56,9 +53,7 @@ export const useCollaborativeGame = ({
       const stateWithSession = {
         ...initialState,
         sessionId: newSessionId,
-        activeUsers: { [user.id]: new Date() },
-        updatedAt: Date.now(),
-        lastUpdatedBy: user.id
+        activeUsers: { [user.id]: new Date() }
       };
 
       await firestoreService.createGameSession(stateWithSession, newSessionId);
@@ -100,14 +95,12 @@ export const useCollaborativeGame = ({
 
   // 更新游戏状态
   const updateGameState = useCallback(async (newState: GameState): Promise<void> => {
-    if (!sessionId || isUpdatingRef.current) {
-      if (!sessionId) setError('没有活跃的会话');
+    if (!sessionId) {
+      setError('没有活跃的会话');
       return;
     }
 
     try {
-      isUpdatingRef.current = true;
-      
       const stateWithUserActivity = {
         ...newState,
         sessionId,
@@ -115,8 +108,8 @@ export const useCollaborativeGame = ({
           ...newState.activeUsers,
           [user.id]: new Date()
         },
-        updatedAt: Date.now(),
-        lastUpdatedBy: user.id
+        // 移除本地时间戳，让服务器设置
+        updatedAt: undefined as any
       };
 
       await firestoreService.updateGameState(sessionId, stateWithUserActivity);
@@ -124,11 +117,6 @@ export const useCollaborativeGame = ({
     } catch (err) {
       const errorMessage = '更新游戏状态失败: ' + (err as Error).message;
       setError(errorMessage);
-    } finally {
-      // 延迟重置更新标志，避免快速连续操作冲突
-      setTimeout(() => {
-        isUpdatingRef.current = false;
-      }, 200);
     }
   }, [sessionId, user.id]);
 
@@ -179,10 +167,7 @@ export const useCollaborativeGame = ({
           if (!mounted) return;
           
           if (state) {
-            // 只有在不是自己更新时才设置状态，避免冲突
-            if (!isUpdatingRef.current || state.lastUpdatedBy !== user.id) {
-              setGameState(state);
-            }
+            setGameState(state);
             setIsConnected(true);
             
             // 更新连接用户列表
