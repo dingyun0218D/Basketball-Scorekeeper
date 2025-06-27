@@ -41,12 +41,12 @@ export const loadCurrentGame = (): GameState | null => {
     // 验证时间字段
     if (!parsed.time || typeof parsed.time !== 'string') {
       console.warn('loadCurrentGame: 时间字段不正确，使用默认值');
-      parsed.time = '12:00';
+      parsed.time = '15:00';
     }
     
     if (!parsed.quarterTime || typeof parsed.quarterTime !== 'string') {
       console.warn('loadCurrentGame: 单节时间字段不正确，使用默认值');
-      parsed.quarterTime = '12:00';
+      parsed.quarterTime = '15:00';
     }
     
     console.log('loadCurrentGame: 成功加载游戏状态', {

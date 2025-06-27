@@ -48,8 +48,8 @@ export const initialGameState: GameState = {
   homeTeam: createDefaultTeam('主队', '#1E40AF'),
   awayTeam: createDefaultTeam('客队', '#DC2626'),
   quarter: 1,
-  time: '12:00',
-  quarterTime: '12:00', // 默认单节12分钟
+  time: '15:00',
+  quarterTime: '15:00', // 默认单节15分钟
   isRunning: false,
   isPaused: false,
   events: [],
@@ -67,8 +67,8 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       // 确保关键字段存在且格式正确
       const validatedState = {
         ...loadedState,
-        time: loadedState.time || '12:00',
-        quarterTime: loadedState.quarterTime || '12:00',
+        time: loadedState.time || '15:00',
+        quarterTime: loadedState.quarterTime || '15:00',
         quarter: loadedState.quarter || 1,
         homeTeam: loadedState.homeTeam || createDefaultTeam('主队', '#1E40AF'),
         awayTeam: loadedState.awayTeam || createDefaultTeam('客队', '#DC2626'),
@@ -427,8 +427,8 @@ export const gameReducer = (state: GameState, action: GameAction): GameState => 
       return {
         ...initialGameState,
         id: generateId(),
-        quarterTime: state.quarterTime, // 保持时间设置
-        time: state.quarterTime, // 重置为设置的时间
+        quarterTime: '15:00', // 重置为15分钟
+        time: '15:00', // 重置时间为15分钟
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };

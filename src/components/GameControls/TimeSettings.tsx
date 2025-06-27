@@ -116,7 +116,7 @@ export const TimeSettings: React.FC<TimeSettingsProps> = ({
                   onChange={(e) => handleMinutesChange(parseInt(e.target.value) || 0)}
                   min="0"
                   max="60"
-                  className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+                  className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-gray-900"
                 />
                 <span className="text-gray-600">分</span>
               </div>
@@ -127,7 +127,7 @@ export const TimeSettings: React.FC<TimeSettingsProps> = ({
                   onChange={(e) => handleSecondsChange(parseInt(e.target.value) || 0)}
                   min="0"
                   max="59"
-                  className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+                  className="w-16 px-2 py-1 border border-gray-300 rounded text-center text-gray-900"
                 />
                 <span className="text-gray-600">秒</span>
               </div>

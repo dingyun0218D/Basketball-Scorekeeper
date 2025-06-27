@@ -56,7 +56,7 @@ export interface GameState {
   awayTeam: Team;
   quarter: number;
   time: string; // MM:SS格式
-  quarterTime: string; // 单节时间设置，默认12:00
+  quarterTime: string; // 单节时间设置，默认15:00
   isRunning: boolean;
   isPaused: boolean;
   events: GameEvent[];
