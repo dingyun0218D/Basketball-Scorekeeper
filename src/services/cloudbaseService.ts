@@ -79,6 +79,7 @@ export class CloudbaseService {
         updatedAt: new Date(),
         lastActiveAt: new Date()
       });
+      console.log('CloudBase 会话创建成功:', sessionId);
     } catch (error) {
       console.error('CloudBase 创建会话失败:', error);
       throw new Error('创建会话失败');
@@ -100,6 +101,7 @@ export class CloudbaseService {
         updatedAt: new Date(),
         lastActiveAt: new Date()
       });
+      console.log('CloudBase 游戏状态更新成功');
     } catch (error) {
       console.error('CloudBase 更新游戏状态失败:', error);
       throw new Error('更新游戏状态失败');
@@ -109,15 +111,20 @@ export class CloudbaseService {
   // 监听游戏状态变化
   subscribeToGameState(sessionId: string, callback: (gameState: GameState | null) => void): () => void {
     if (!this.checkAvailability()) {
+      console.warn('CloudBase 不可用，无法监听游戏状态');
       callback(null);
       return () => {};
     }
 
+    console.log('开始监听 CloudBase 游戏状态:', sessionId);
+
     try {
       const watcher: CloudBaseWatcher = this.getDB().collection(this.gameCollection).doc(sessionId).watch({
         onChange: (snapshot: CloudBaseSnapshot) => {
-          if (snapshot.docs.length > 0) {
+          console.log('CloudBase 游戏状态变化:', snapshot);
+          if (snapshot.docs && snapshot.docs.length > 0) {
             const data = snapshot.docs[0].data;
+            console.log('CloudBase 接收到游戏状态:', data);
             const gameState: GameState = {
               ...data,
               createdAt: data.createdAt || new Date(),
@@ -125,6 +132,7 @@ export class CloudbaseService {
             } as GameState;
             callback(gameState);
           } else {
+            console.log('CloudBase 游戏状态为空');
             callback(null);
           }
         },
@@ -135,6 +143,7 @@ export class CloudbaseService {
       });
 
       return () => {
+        console.log('停止监听 CloudBase 游戏状态');
         watcher.close();
       };
     } catch (error) {

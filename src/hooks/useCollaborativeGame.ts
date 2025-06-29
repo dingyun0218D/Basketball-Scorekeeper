@@ -83,6 +83,12 @@ export const useCollaborativeGame = ({
       setIsHost(true);
       setError(null);
       
+      // 立即设置连接状态，避免等待监听回调
+      setIsConnected(true);
+      setGameState(stateWithSession);
+      
+      console.log('会话创建成功:', newSessionId, '服务类型:', collaborationServiceManager.getCurrentServiceType());
+      
       return newSessionId;
     } catch (err) {
       const errorMessage = '创建会话失败: ' + (err as Error).message;
@@ -106,6 +112,11 @@ export const useCollaborativeGame = ({
       
       // 更新用户活动状态
       await collaborationServiceManager.updateUserActivity(targetSessionId, user.id);
+      
+      // 立即设置连接状态
+      setIsConnected(true);
+      
+      console.log('加入会话成功:', targetSessionId, '服务类型:', collaborationServiceManager.getCurrentServiceType());
       
       return true;
     } catch (err) {
@@ -188,9 +199,14 @@ export const useCollaborativeGame = ({
         const unsubscribeGameState = collaborationServiceManager.subscribeToGameState(sessionId, (state: GameState | null) => {
           if (!mounted) return;
           
+          console.log('收到协作状态更新:', state ? '有数据' : '无数据', '当前服务:', collaborationServiceManager.getCurrentServiceType());
+          
           if (state) {
             setGameState(state);
-            setIsConnected(true);
+            if (!isConnected) {
+              console.log('设置连接状态为已连接');
+              setIsConnected(true);
+            }
             
             // 更新连接用户列表
             if (state.activeUsers) {
@@ -207,8 +223,10 @@ export const useCollaborativeGame = ({
                 }));
               
               setConnectedUsers(activeUsersList);
+              console.log('更新连接用户列表:', activeUsersList.length, '个用户');
             }
           } else {
+            console.log('游戏状态为空，断开连接');
             setGameState(null);
             setIsConnected(false);
             setConnectedUsers([]);
