@@ -3,6 +3,7 @@ import { useCollaborativeGame } from '../../hooks/useCollaborativeGame';
 import { GameState, User } from '../../types';
 import { GameContext } from '../../contexts/GameContext';
 import { ConfirmModal } from '../common/ConfirmModal';
+import { ServiceSelector } from './ServiceSelector';
 import { 
   shouldSyncRemoteState, 
   shouldPushLocalState, 
@@ -48,7 +49,10 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
     joinSession,
     updateGameState,
     leaveSession,
-    error
+    error,
+    currentServiceType,
+    availableServices,
+    switchService
   } = useCollaborativeGame({
     user,
     initialGameState: initialGameState || localGameState
@@ -154,19 +158,31 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
     return (
       <>
         <div className="collaborative-game-manager p-4 border rounded-lg bg-green-50">
-          <div className="flex items-center justify-between mb-4">
-            <div>
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
               <h3 className="text-lg font-semibold text-green-800">
                 实时协作模式 {isHost && '(主机)'}
               </h3>
               <p className="text-green-600">会话ID: {sessionId}</p>
             </div>
-            <button
-              onClick={handleLeaveSession}
-              className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-            >
-              离开会话
-            </button>
+            
+            {/* 右上角：服务选择器和离开按钮 */}
+            <div className="flex items-start space-x-3">
+              <div className="min-w-0">
+                <ServiceSelector
+                  currentService={currentServiceType}
+                  availableServices={availableServices}
+                  onServiceChange={switchService}
+                  disabled={true} // 连接时禁用切换
+                />
+              </div>
+              <button
+                onClick={handleLeaveSession}
+                className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 whitespace-nowrap"
+              >
+                离开会话
+              </button>
+            </div>
           </div>
           
           <div className="flex items-center justify-between">
@@ -210,7 +226,19 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   // 未连接时显示模式选择界面
   return (
     <div className="collaborative-game-manager p-4 border rounded-lg bg-gray-50">
-      <h3 className="text-lg font-semibold mb-4">实时协作计分</h3>
+      <div className="flex items-start justify-between mb-4">
+        <h3 className="text-lg font-semibold flex-1">实时协作计分</h3>
+        
+        {/* 右上角：服务选择器 */}
+        <div className="min-w-0">
+          <ServiceSelector
+            currentService={currentServiceType}
+            availableServices={availableServices}
+            onServiceChange={switchService}
+            disabled={isLoading}
+          />
+        </div>
+      </div>
       
       {mode === 'select' && (
         <div className="space-y-3">
@@ -291,7 +319,7 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
               value={joinSessionId}
               onChange={(e) => setJoinSessionId(e.target.value.toUpperCase())}
               placeholder="输入6位会话码 (如: ABC123)"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
               maxLength={6}
             />
           </div>

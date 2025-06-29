@@ -131,6 +131,16 @@ export class FirestoreService {
   generateSessionId(): string {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   }
+
+  // 检查服务是否可用
+  isAvailable(): boolean {
+    try {
+      return db !== undefined && db !== null;
+    } catch (error) {
+      console.error('检查 Firebase 可用性失败:', error);
+      return false;
+    }
+  }
 }
 
 export const firestoreService = new FirestoreService(); 

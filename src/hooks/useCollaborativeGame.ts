@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameState, GameEvent, User } from '../types';
-import { firestoreService } from '../services/firestoreService';
+import { collaborationServiceManager, CollaborationServiceType } from '../services/collaborationService';
 
 interface UseCollaborativeGameProps {
   sessionId?: string;
@@ -21,6 +21,9 @@ interface UseCollaborativeGameReturn {
   addEvent: (event: Omit<GameEvent, 'id' | 'timestamp' | 'sessionId'>) => Promise<void>;
   leaveSession: () => void;
   error: string | null;
+  currentServiceType: CollaborationServiceType;
+  availableServices: CollaborationServiceType[];
+  switchService: (serviceType: CollaborationServiceType) => void;
 }
 
 export const useCollaborativeGame = ({
@@ -35,6 +38,12 @@ export const useCollaborativeGame = ({
   const [isHost, setIsHost] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId || null);
   const [error, setError] = useState<string | null>(null);
+  const [currentServiceType, setCurrentServiceType] = useState<CollaborationServiceType>(
+    collaborationServiceManager.getCurrentServiceType()
+  );
+  const [availableServices, setAvailableServices] = useState<CollaborationServiceType[]>(
+    collaborationServiceManager.getAvailableServices()
+  );
 
   // 用于存储取消订阅函数
   const unsubscribeRefs = useRef<Array<() => void>>([]);
@@ -46,17 +55,30 @@ export const useCollaborativeGame = ({
     setIsConnected(false);
   }, []);
 
+  // 切换服务
+  const switchService = useCallback((serviceType: CollaborationServiceType) => {
+    if (sessionId) {
+      setError('请先离开当前会话再切换服务');
+      return;
+    }
+    
+    collaborationServiceManager.switchService(serviceType);
+    setCurrentServiceType(serviceType);
+    setAvailableServices(collaborationServiceManager.getAvailableServices());
+    setError(null);
+  }, [sessionId]);
+
   // 创建新会话
   const createSession = useCallback(async (initialState: GameState): Promise<string> => {
     try {
-      const newSessionId = firestoreService.generateSessionId();
+      const newSessionId = collaborationServiceManager.generateSessionId();
       const stateWithSession = {
         ...initialState,
         sessionId: newSessionId,
         activeUsers: { [user.id]: new Date() }
       };
 
-      await firestoreService.createGameSession(stateWithSession, newSessionId);
+      await collaborationServiceManager.createGameSession(stateWithSession, newSessionId);
       setSessionId(newSessionId);
       setIsHost(true);
       setError(null);
@@ -72,7 +94,7 @@ export const useCollaborativeGame = ({
   // 加入现有会话
   const joinSession = useCallback(async (targetSessionId: string): Promise<boolean> => {
     try {
-      const exists = await firestoreService.checkSessionExists(targetSessionId);
+      const exists = await collaborationServiceManager.checkSessionExists(targetSessionId);
       if (!exists) {
         setError('会话不存在');
         return false;
@@ -83,7 +105,7 @@ export const useCollaborativeGame = ({
       setError(null);
       
       // 更新用户活动状态
-      await firestoreService.updateUserActivity(targetSessionId, user.id);
+      await collaborationServiceManager.updateUserActivity(targetSessionId, user.id);
       
       return true;
     } catch (err) {
@@ -112,7 +134,7 @@ export const useCollaborativeGame = ({
         updatedAt: undefined as unknown as number
       };
 
-      await firestoreService.updateGameState(sessionId, stateWithUserActivity);
+      await collaborationServiceManager.updateGameState(sessionId, stateWithUserActivity);
       setError(null);
     } catch (err) {
       const errorMessage = '更新游戏状态失败: ' + (err as Error).message;
@@ -130,12 +152,12 @@ export const useCollaborativeGame = ({
     try {
       const event: GameEvent = {
         ...eventData,
-        id: '', // 将由 Firestore 生成
+        id: '', // 将由服务生成
         timestamp: new Date(),
         sessionId
       };
 
-      await firestoreService.addGameEvent(sessionId, event);
+      await collaborationServiceManager.addGameEvent(sessionId, event);
       setError(null);
     } catch (err) {
       const errorMessage = '添加事件失败: ' + (err as Error).message;
@@ -163,7 +185,7 @@ export const useCollaborativeGame = ({
     const startListening = async () => {
       try {
         // 订阅游戏状态变化
-        const unsubscribeGameState = firestoreService.subscribeToGameState(sessionId, (state) => {
+        const unsubscribeGameState = collaborationServiceManager.subscribeToGameState(sessionId, (state: GameState | null) => {
           if (!mounted) return;
           
           if (state) {
@@ -175,7 +197,7 @@ export const useCollaborativeGame = ({
               const now = new Date();
               const activeUsersList: User[] = Object.entries(state.activeUsers)
                 .filter(([, lastSeen]) => {
-                  const lastSeenDate = lastSeen instanceof Date ? lastSeen : new Date(lastSeen);
+                  const lastSeenDate = lastSeen instanceof Date ? lastSeen : new Date(lastSeen as any);
                   return (now.getTime() - lastSeenDate.getTime()) < 30000; // 30秒内活跃
                 })
                 .map(([userId]) => ({
@@ -194,39 +216,50 @@ export const useCollaborativeGame = ({
         });
 
         // 订阅游戏事件变化
-        const unsubscribeEvents = firestoreService.subscribeToGameEvents(sessionId, (eventsList) => {
+        const unsubscribeEvents = collaborationServiceManager.subscribeToGameEvents(sessionId, (eventsList: GameEvent[]) => {
           if (!mounted) return;
           setEvents(eventsList);
         });
 
+        // 保存取消订阅函数
         unsubscribeRefs.current = [unsubscribeGameState, unsubscribeEvents];
 
         // 定期更新用户活动状态
-        const activityInterval = setInterval(() => {
+        const activityInterval = setInterval(async () => {
           if (mounted && sessionId) {
-            firestoreService.updateUserActivity(sessionId, user.id).catch(console.error);
+            try {
+              await collaborationServiceManager.updateUserActivity(sessionId, user.id);
+            } catch (err) {
+              console.warn('更新用户活动状态失败:', err);
+            }
           }
         }, 15000); // 每15秒更新一次
 
         return () => {
           clearInterval(activityInterval);
         };
-
       } catch (err) {
-        if (mounted) {
-          setError('连接失败: ' + (err as Error).message);
-          setIsConnected(false);
-        }
+        console.error('启动监听失败:', err);
+        setError('连接失败: ' + (err as Error).message);
       }
     };
 
-    startListening();
+    const cleanup = startListening();
 
     return () => {
       mounted = false;
+      cleanup?.then(cleanupFn => cleanupFn?.());
+      unsubscribeRefs.current.forEach(unsubscribe => unsubscribe());
+      unsubscribeRefs.current = [];
+    };
+  }, [sessionId, user.id, user.name]);
+
+  // 在组件卸载时清理
+  useEffect(() => {
+    return () => {
       cleanup();
     };
-  }, [sessionId, user.id, user.name, cleanup]);
+  }, [cleanup]);
 
   return {
     gameState,
@@ -240,6 +273,9 @@ export const useCollaborativeGame = ({
     updateGameState,
     addEvent,
     leaveSession,
-    error
+    error,
+    currentServiceType,
+    availableServices,
+    switchService
   };
 }; 

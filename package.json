@@ -13,6 +13,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@cloudbase/js-sdk": "^2.17.6",
     "clsx": "^2.0.0",
     "firebase": "^11.9.1",
     "lucide-react": "^0.294.0",
