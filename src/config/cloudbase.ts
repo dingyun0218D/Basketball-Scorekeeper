@@ -1,5 +1,19 @@
 import cloudbase from '@cloudbase/js-sdk';
 
+// CloudBase 类型定义
+interface CloudBaseApp {
+  database(): CloudBaseDB;
+  auth(): CloudBaseAuth;
+}
+
+interface CloudBaseDB {
+  collection(name: string): unknown;
+}
+
+interface CloudBaseAuth {
+  signInAnonymously(): Promise<unknown>;
+}
+
 // CloudBase 配置 - 使用环境变量
 const cloudbaseConfig = {
   env: import.meta.env.VITE_CLOUDBASE_ENV_ID, // 环境ID
@@ -19,8 +33,8 @@ if (missingEnvVars.length > 0) {
 }
 
 // 初始化 CloudBase
-let app: any = null;
-let db: any = null;
+let app: CloudBaseApp | null = null;
+let db: CloudBaseDB | null = null;
 
 try {
   if (!missingEnvVars.length) {
@@ -28,7 +42,7 @@ try {
     db = app.database();
     
     // 匿名登录
-    app.auth().signInAnonymously().catch((error: any) => {
+    app.auth().signInAnonymously().catch((error: Error) => {
       console.warn('CloudBase 匿名登录失败:', error);
     });
   }

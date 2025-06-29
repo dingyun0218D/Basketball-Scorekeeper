@@ -1,5 +1,55 @@
-import { db } from '../config/cloudbase';
+import { app, db } from '../config/cloudbase';
 import { GameState, GameEvent } from '../types';
+
+// CloudBase 数据库类型定义
+interface CloudBaseDB {
+  collection(name: string): CloudBaseCollection;
+}
+
+interface CloudBaseCollection {
+  doc(id: string): CloudBaseDocument;
+  add(data: Record<string, unknown>): Promise<CloudBaseAddResult>;
+  orderBy(field: string, order: 'asc' | 'desc'): CloudBaseQuery;
+}
+
+interface CloudBaseDocument {
+  set(data: Record<string, unknown>): Promise<void>;
+  update(data: Record<string, unknown>): Promise<void>;
+  get(): Promise<CloudBaseGetResult>;
+  remove(): Promise<void>;
+  collection(name: string): CloudBaseCollection;
+  watch(options: CloudBaseWatchOptions): CloudBaseWatcher;
+}
+
+interface CloudBaseQuery {
+  watch(options: CloudBaseWatchOptions): CloudBaseWatcher;
+}
+
+interface CloudBaseAddResult {
+  id: string;
+}
+
+interface CloudBaseGetResult {
+  data?: Record<string, unknown>;
+}
+
+interface CloudBaseWatchOptions {
+  onChange: (snapshot: CloudBaseSnapshot) => void;
+  onError: (error: Error) => void;
+}
+
+interface CloudBaseSnapshot {
+  docs: CloudBaseDoc[];
+}
+
+interface CloudBaseDoc {
+  id: string;
+  data: Record<string, unknown>;
+}
+
+interface CloudBaseWatcher {
+  close(): void;
+}
 
 export class CloudbaseService {
   private gameCollection = 'games';
@@ -7,11 +57,12 @@ export class CloudbaseService {
 
   // 检查CloudBase是否可用
   private checkAvailability(): boolean {
-    if (!db) {
-      console.warn('CloudBase 未初始化或不可用');
-      return false;
-    }
-    return true;
+    return !!app && !!db;
+  }
+
+  // 获取数据库实例（带类型断言）
+  private getDB(): CloudBaseDB {
+    return db as CloudBaseDB;
   }
 
   // 创建新游戏会话
@@ -21,7 +72,7 @@ export class CloudbaseService {
     }
 
     try {
-      await db.collection(this.gameCollection).doc(sessionId).set({
+      await this.getDB().collection(this.gameCollection).doc(sessionId).set({
         ...gameState,
         sessionId,
         createdAt: new Date(),
@@ -43,7 +94,7 @@ export class CloudbaseService {
     try {
       const { activeUsers, ...updateData } = gameState;
       
-      await db.collection(this.gameCollection).doc(sessionId).update({
+      await this.getDB().collection(this.gameCollection).doc(sessionId).update({
         ...updateData,
         activeUsers: activeUsers || {},
         updatedAt: new Date(),
@@ -63,21 +114,21 @@ export class CloudbaseService {
     }
 
     try {
-      const watcher = db.collection(this.gameCollection).doc(sessionId).watch({
-        onChange: (snapshot: any) => {
+      const watcher: CloudBaseWatcher = this.getDB().collection(this.gameCollection).doc(sessionId).watch({
+        onChange: (snapshot: CloudBaseSnapshot) => {
           if (snapshot.docs.length > 0) {
             const data = snapshot.docs[0].data;
             const gameState: GameState = {
               ...data,
               createdAt: data.createdAt || new Date(),
               updatedAt: data.updatedAt || new Date()
-            };
+            } as GameState;
             callback(gameState);
           } else {
             callback(null);
           }
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
           console.error('CloudBase 监听游戏状态失败:', error);
           callback(null);
         }
@@ -106,7 +157,7 @@ export class CloudbaseService {
         sessionId
       };
 
-      await db.collection(this.gameCollection).doc(sessionId)
+      await this.getDB().collection(this.gameCollection).doc(sessionId)
         .collection(this.eventsCollection).add(eventData);
     } catch (error) {
       console.error('CloudBase 添加游戏事件失败:', error);
@@ -122,23 +173,23 @@ export class CloudbaseService {
     }
 
     try {
-      const watcher = db.collection(this.gameCollection).doc(sessionId)
+      const watcher: CloudBaseWatcher = this.getDB().collection(this.gameCollection).doc(sessionId)
         .collection(this.eventsCollection)
         .orderBy('timestamp', 'desc')
         .watch({
-          onChange: (snapshot: any) => {
+          onChange: (snapshot: CloudBaseSnapshot) => {
             const events: GameEvent[] = [];
-            snapshot.docs.forEach((doc: any) => {
+            snapshot.docs.forEach((doc: CloudBaseDoc) => {
               const data = doc.data;
               events.push({
                 ...data,
                 id: doc.id,
                 timestamp: data.timestamp || new Date()
-              });
+              } as GameEvent);
             });
             callback(events);
           },
-          onError: (error: any) => {
+          onError: (error: Error) => {
             console.error('CloudBase 监听游戏事件失败:', error);
             callback([]);
           }
@@ -161,7 +212,7 @@ export class CloudbaseService {
     }
 
     try {
-      const result = await db.collection(this.gameCollection).doc(sessionId).get();
+      const result = await this.getDB().collection(this.gameCollection).doc(sessionId).get();
       return result.data !== undefined;
     } catch (error) {
       console.error('CloudBase 检查会话失败:', error);
@@ -176,7 +227,7 @@ export class CloudbaseService {
     }
 
     try {
-      await db.collection(this.gameCollection).doc(sessionId).remove();
+      await this.getDB().collection(this.gameCollection).doc(sessionId).remove();
     } catch (error) {
       console.error('CloudBase 删除游戏会话失败:', error);
       throw new Error('删除游戏会话失败');
@@ -190,7 +241,7 @@ export class CloudbaseService {
     }
 
     try {
-      await db.collection(this.gameCollection).doc(sessionId).update({
+      await this.getDB().collection(this.gameCollection).doc(sessionId).update({
         [`activeUsers.${userId}`]: new Date()
       });
     } catch (error) {
