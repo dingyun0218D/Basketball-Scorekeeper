@@ -61,6 +61,10 @@ if (missingEnvVars.length > 0) {
 // 初始化 CloudBase
 let app: CloudBaseApp | null = null;
 let db: CloudBaseDB | null = null;
+let isAuthenticated = false;
+
+// 认证状态 Promise，用于等待认证完成
+let authPromise: Promise<void> | null = null;
 
 try {
   if (!missingEnvVars.length) {
@@ -71,10 +75,11 @@ try {
     db = app.database();
     console.log('CloudBase database 初始化成功');
     
-    // 匿名登录
-    app.auth().signInAnonymously()
+    // 匿名登录并等待完成
+    authPromise = app.auth().signInAnonymously()
       .then(() => {
         console.log('CloudBase 匿名登录成功');
+        isAuthenticated = true;
       })
       .catch((error: Error) => {
         const cloudbaseError = error as CloudBaseError;
@@ -84,6 +89,8 @@ try {
           code: cloudbaseError.code,
           details: cloudbaseError.details
         });
+        isAuthenticated = false;
+        throw error; // 重新抛出错误，让调用者知道登录失败
       });
   } else {
     console.warn('跳过 CloudBase 初始化，因为缺少必要的环境变量');
@@ -101,6 +108,7 @@ try {
   // 确保变量保持为 null
   app = null;
   db = null;
+  isAuthenticated = false;
 }
 
 // 最终状态检查
@@ -111,5 +119,22 @@ console.log('CloudBase 初始化完成，最终状态:', {
   isAvailable: !!app && !!db
 });
 
-export { app, db };
+// 等待认证完成的辅助函数
+export const waitForAuth = async (): Promise<boolean> => {
+  if (!authPromise) {
+    console.warn('CloudBase 认证 Promise 不存在');
+    return false;
+  }
+  
+  try {
+    await authPromise;
+    console.log('CloudBase 认证等待完成，状态:', isAuthenticated);
+    return isAuthenticated;
+  } catch (error) {
+    console.error('CloudBase 认证等待失败:', error);
+    return false;
+  }
+};
+
+export { app, db, isAuthenticated };
 export default app; 

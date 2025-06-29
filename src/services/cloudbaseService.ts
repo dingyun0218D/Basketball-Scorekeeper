@@ -1,4 +1,4 @@
-import { app, db } from '../config/cloudbase';
+import { app, db, isAuthenticated, waitForAuth } from '../config/cloudbase';
 import { GameState, GameEvent } from '../types';
 
 // CloudBase 数据库类型定义
@@ -55,12 +55,51 @@ export class CloudbaseService {
   private gameCollection = 'games';
   private eventsCollection = 'events';
 
-  // 检查CloudBase是否可用
+  // 检查CloudBase是否可用并已认证
+  private async checkAvailabilityAndAuth(): Promise<boolean> {
+    const basicAvailability = !!app && !!db;
+    console.log('CloudBase 基础可用性检查:', {
+      app: !!app,
+      db: !!db,
+      isAuthenticated,
+      envId: import.meta.env.VITE_CLOUDBASE_ENV_ID,
+      region: import.meta.env.VITE_CLOUDBASE_REGION,
+      basicAvailability
+    });
+    
+    if (!basicAvailability) {
+      console.warn('CloudBase 不可用，详细信息:', {
+        app: app ? 'initialized' : 'null/undefined',
+        db: db ? 'initialized' : 'null/undefined',
+        envIdExists: !!import.meta.env.VITE_CLOUDBASE_ENV_ID,
+        envIdValue: import.meta.env.VITE_CLOUDBASE_ENV_ID ? 'configured' : 'not set',
+        regionExists: !!import.meta.env.VITE_CLOUDBASE_REGION,
+        regionValue: import.meta.env.VITE_CLOUDBASE_REGION || 'not set'
+      });
+      return false;
+    }
+
+    // 如果还没有认证，等待认证完成
+    if (!isAuthenticated) {
+      console.log('CloudBase 需要等待认证完成...');
+      const authSuccess = await waitForAuth();
+      if (!authSuccess) {
+        console.error('CloudBase 认证失败，无法使用数据库服务');
+        return false;
+      }
+    }
+
+    console.log('CloudBase 可用性和认证检查通过');
+    return true;
+  }
+
+  // 检查CloudBase是否可用（同步版本，用于向后兼容）
   private checkAvailability(): boolean {
     const isAvailable = !!app && !!db;
     console.log('CloudBase 可用性检查:', {
       app: !!app,
       db: !!db,
+      isAuthenticated,
       envId: import.meta.env.VITE_CLOUDBASE_ENV_ID,
       region: import.meta.env.VITE_CLOUDBASE_REGION,
       isAvailable
@@ -92,11 +131,13 @@ export class CloudbaseService {
     console.log('CloudBase createGameSession 开始:', {
       sessionId,
       hasGameState: !!gameState,
-      serviceAvailable: this.checkAvailability()
+      basicAvailable: this.checkAvailability()
     });
 
-    if (!this.checkAvailability()) {
-      const error = `CloudBase 服务不可用: app=${!!app}, db=${!!db}, envId=${!!import.meta.env.VITE_CLOUDBASE_ENV_ID}`;
+    // 等待认证完成
+    const isReady = await this.checkAvailabilityAndAuth();
+    if (!isReady) {
+      const error = `CloudBase 服务不可用或认证失败: app=${!!app}, db=${!!db}, auth=${isAuthenticated}, envId=${!!import.meta.env.VITE_CLOUDBASE_ENV_ID}`;
       console.error('CloudBase 不可用:', error);
       throw new Error(error);
     }
@@ -115,7 +156,8 @@ export class CloudbaseService {
       console.log('CloudBase 准备写入数据:', {
         sessionId,
         dataKeys: Object.keys(sessionData),
-        dataSize: JSON.stringify(sessionData).length
+        dataSize: JSON.stringify(sessionData).length,
+        authenticated: isAuthenticated
       });
 
       await this.getDB().collection(this.gameCollection).doc(sessionId).set(sessionData);
@@ -127,7 +169,8 @@ export class CloudbaseService {
         errorStack: error instanceof Error ? error.stack : 'No stack trace',
         errorType: typeof error,
         errorConstructor: error?.constructor?.name,
-        sessionId
+        sessionId,
+        authenticated: isAuthenticated
       });
       
       if (error instanceof Error) {
@@ -148,8 +191,10 @@ export class CloudbaseService {
 
   // 更新游戏状态
   async updateGameState(sessionId: string, gameState: GameState): Promise<void> {
-    if (!this.checkAvailability()) {
-      throw new Error('CloudBase 服务不可用');
+    // 等待认证完成
+    const isReady = await this.checkAvailabilityAndAuth();
+    if (!isReady) {
+      throw new Error('CloudBase 服务不可用或认证失败');
     }
 
     try {
@@ -177,46 +222,73 @@ export class CloudbaseService {
     }
 
     console.log('开始监听 CloudBase 游戏状态:', sessionId);
+    
+    let watcher: CloudBaseWatcher | null = null;
+    let mounted = true;
 
-    try {
-      const watcher: CloudBaseWatcher = this.getDB().collection(this.gameCollection).doc(sessionId).watch({
-        onChange: (snapshot: CloudBaseSnapshot) => {
-          console.log('CloudBase 游戏状态变化:', snapshot);
-          if (snapshot.docs && snapshot.docs.length > 0) {
-            const data = snapshot.docs[0].data;
-            console.log('CloudBase 接收到游戏状态:', data);
-            const gameState: GameState = {
-              ...data,
-              createdAt: data.createdAt || new Date(),
-              updatedAt: data.updatedAt || new Date()
-            } as GameState;
-            callback(gameState);
-          } else {
-            console.log('CloudBase 游戏状态为空');
+    // 异步等待认证并开始监听
+    this.checkAvailabilityAndAuth().then((isReady) => {
+      if (!mounted) return; // 如果已经取消订阅，不再继续
+      
+      if (!isReady) {
+        console.warn('CloudBase 认证失败，无法监听游戏状态');
+        callback(null);
+        return;
+      }
+
+      try {
+        watcher = this.getDB().collection(this.gameCollection).doc(sessionId).watch({
+          onChange: (snapshot: CloudBaseSnapshot) => {
+            if (!mounted) return; // 检查是否还在监听
+            
+            console.log('CloudBase 游戏状态变化:', snapshot);
+            if (snapshot.docs && snapshot.docs.length > 0) {
+              const data = snapshot.docs[0].data;
+              console.log('CloudBase 接收到游戏状态:', data);
+              const gameState: GameState = {
+                ...data,
+                createdAt: data.createdAt || new Date(),
+                updatedAt: data.updatedAt || new Date()
+              } as GameState;
+              callback(gameState);
+            } else {
+              console.log('CloudBase 游戏状态为空');
+              callback(null);
+            }
+          },
+          onError: (error: Error) => {
+            if (!mounted) return;
+            console.error('CloudBase 监听游戏状态失败:', error);
             callback(null);
           }
-        },
-        onError: (error: Error) => {
-          console.error('CloudBase 监听游戏状态失败:', error);
-          callback(null);
-        }
-      });
-
-      return () => {
-        console.log('停止监听 CloudBase 游戏状态');
-        watcher.close();
-      };
-    } catch (error) {
-      console.error('CloudBase 订阅游戏状态失败:', error);
+        });
+      } catch (error) {
+        if (!mounted) return;
+        console.error('CloudBase 订阅游戏状态失败:', error);
+        callback(null);
+      }
+    }).catch((error) => {
+      if (!mounted) return;
+      console.error('CloudBase 认证等待失败:', error);
       callback(null);
-      return () => {};
-    }
+    });
+
+    // 返回清理函数
+    return () => {
+      console.log('停止监听 CloudBase 游戏状态');
+      mounted = false;
+      if (watcher) {
+        watcher.close();
+      }
+    };
   }
 
   // 添加游戏事件
   async addGameEvent(sessionId: string, event: GameEvent): Promise<void> {
-    if (!this.checkAvailability()) {
-      throw new Error('CloudBase 服务不可用');
+    // 等待认证完成
+    const isReady = await this.checkAvailabilityAndAuth();
+    if (!isReady) {
+      throw new Error('CloudBase 服务不可用或认证失败');
     }
 
     try {
@@ -241,42 +313,70 @@ export class CloudbaseService {
       return () => {};
     }
 
-    try {
-      const watcher: CloudBaseWatcher = this.getDB().collection(this.gameCollection).doc(sessionId)
-        .collection(this.eventsCollection)
-        .orderBy('timestamp', 'desc')
-        .watch({
-          onChange: (snapshot: CloudBaseSnapshot) => {
-            const events: GameEvent[] = [];
-            snapshot.docs.forEach((doc: CloudBaseDoc) => {
-              const data = doc.data;
-              events.push({
-                ...data,
-                id: doc.id,
-                timestamp: data.timestamp || new Date()
-              } as GameEvent);
-            });
-            callback(events);
-          },
-          onError: (error: Error) => {
-            console.error('CloudBase 监听游戏事件失败:', error);
-            callback([]);
-          }
-        });
+    let watcher: CloudBaseWatcher | null = null;
+    let mounted = true;
 
-      return () => {
-        watcher.close();
-      };
-    } catch (error) {
-      console.error('CloudBase 订阅游戏事件失败:', error);
+    // 异步等待认证并开始监听
+    this.checkAvailabilityAndAuth().then((isReady) => {
+      if (!mounted) return; // 如果已经取消订阅，不再继续
+      
+      if (!isReady) {
+        console.warn('CloudBase 认证失败，无法监听游戏事件');
+        callback([]);
+        return;
+      }
+
+      try {
+        watcher = this.getDB().collection(this.gameCollection).doc(sessionId)
+          .collection(this.eventsCollection)
+          .orderBy('timestamp', 'desc')
+          .watch({
+            onChange: (snapshot: CloudBaseSnapshot) => {
+              if (!mounted) return; // 检查是否还在监听
+              
+              const events: GameEvent[] = [];
+              snapshot.docs.forEach((doc: CloudBaseDoc) => {
+                const data = doc.data;
+                events.push({
+                  ...data,
+                  id: doc.id,
+                  timestamp: data.timestamp || new Date()
+                } as GameEvent);
+              });
+              callback(events);
+            },
+            onError: (error: Error) => {
+              if (!mounted) return;
+              console.error('CloudBase 监听游戏事件失败:', error);
+              callback([]);
+            }
+          });
+      } catch (error) {
+        if (!mounted) return;
+        console.error('CloudBase 订阅游戏事件失败:', error);
+        callback([]);
+      }
+    }).catch((error) => {
+      if (!mounted) return;
+      console.error('CloudBase 认证等待失败:', error);
       callback([]);
-      return () => {};
-    }
+    });
+
+    // 返回清理函数
+    return () => {
+      console.log('停止监听 CloudBase 游戏事件');
+      mounted = false;
+      if (watcher) {
+        watcher.close();
+      }
+    };
   }
 
   // 检查会话是否存在
   async checkSessionExists(sessionId: string): Promise<boolean> {
-    if (!this.checkAvailability()) {
+    // 等待认证完成
+    const isReady = await this.checkAvailabilityAndAuth();
+    if (!isReady) {
       return false;
     }
 
@@ -291,8 +391,10 @@ export class CloudbaseService {
 
   // 删除游戏会话
   async deleteGameSession(sessionId: string): Promise<void> {
-    if (!this.checkAvailability()) {
-      throw new Error('CloudBase 服务不可用');
+    // 等待认证完成
+    const isReady = await this.checkAvailabilityAndAuth();
+    if (!isReady) {
+      throw new Error('CloudBase 服务不可用或认证失败');
     }
 
     try {
@@ -305,8 +407,10 @@ export class CloudbaseService {
 
   // 更新用户活动时间
   async updateUserActivity(sessionId: string, userId: string): Promise<void> {
-    if (!this.checkAvailability()) {
-      throw new Error('CloudBase 服务不可用');
+    // 等待认证完成
+    const isReady = await this.checkAvailabilityAndAuth();
+    if (!isReady) {
+      throw new Error('CloudBase 服务不可用或认证失败');
     }
 
     try {
