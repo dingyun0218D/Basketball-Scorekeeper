@@ -132,7 +132,7 @@ export class CloudbaseService {
       
       if (error instanceof Error) {
         // 提取更多错误信息
-        let errorMessage = `CloudBase创建会话失败: ${error.message}`;
+        const errorMessage = `CloudBase创建会话失败: ${error.message}`;
         if (error.stack) {
           console.error('错误堆栈:', error.stack);
         }

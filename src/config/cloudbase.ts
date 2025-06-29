@@ -14,6 +14,14 @@ interface CloudBaseAuth {
   signInAnonymously(): Promise<unknown>;
 }
 
+// CloudBase 错误类型定义
+interface CloudBaseError {
+  code?: string;
+  details?: string;
+  message: string;
+  stack?: string;
+}
+
 // 打印环境信息便于调试
 console.log('CloudBase 环境配置检查:', {
   NODE_ENV: import.meta.env.NODE_ENV,
@@ -69,11 +77,12 @@ try {
         console.log('CloudBase 匿名登录成功');
       })
       .catch((error: Error) => {
+        const cloudbaseError = error as CloudBaseError;
         console.error('CloudBase 匿名登录失败:', {
           error: error.message,
           stack: error.stack,
-          code: (error as any).code,
-          details: (error as any).details
+          code: cloudbaseError.code,
+          details: cloudbaseError.details
         });
       });
   } else {
