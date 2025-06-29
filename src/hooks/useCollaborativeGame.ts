@@ -47,6 +47,8 @@ export const useCollaborativeGame = ({
 
   // 用于存储取消订阅函数
   const unsubscribeRefs = useRef<Array<() => void>>([]);
+  // 跟踪是否已经成功连接过，避免依赖问题
+  const hasConnectedRef = useRef(false);
 
   // 清理所有订阅
   const cleanup = useCallback(() => {
@@ -86,6 +88,7 @@ export const useCollaborativeGame = ({
       // 立即设置连接状态，避免等待监听回调
       setIsConnected(true);
       setGameState(stateWithSession);
+      hasConnectedRef.current = true; // 标记已经连接过
       
       console.log('会话创建成功:', newSessionId, '服务类型:', collaborationServiceManager.getCurrentServiceType());
       
@@ -115,6 +118,7 @@ export const useCollaborativeGame = ({
       
       // 立即设置连接状态
       setIsConnected(true);
+      hasConnectedRef.current = true; // 标记已经连接过
       
       console.log('加入会话成功:', targetSessionId, '服务类型:', collaborationServiceManager.getCurrentServiceType());
       
@@ -185,16 +189,22 @@ export const useCollaborativeGame = ({
     setConnectedUsers([]);
     setIsHost(false);
     setError(null);
+    hasConnectedRef.current = false; // 重置连接标记
   }, [cleanup]);
 
   // 监听游戏状态和事件
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      hasConnectedRef.current = false; // 重置连接标记
+      return;
+    }
 
     let mounted = true;
 
     const startListening = async () => {
       try {
+        console.log('开始监听会话:', sessionId, '初始连接状态:', hasConnectedRef.current);
+        
         // 订阅游戏状态变化
         const unsubscribeGameState = collaborationServiceManager.subscribeToGameState(sessionId, (state: GameState | null) => {
           if (!mounted) return;
@@ -203,9 +213,10 @@ export const useCollaborativeGame = ({
           
           if (state) {
             setGameState(state);
-            if (!isConnected) {
-              console.log('设置连接状态为已连接');
+            if (!hasConnectedRef.current) {
+              console.log('首次收到状态，设置连接状态为已连接');
               setIsConnected(true);
+              hasConnectedRef.current = true;
             }
             
             // 更新连接用户列表
@@ -226,10 +237,16 @@ export const useCollaborativeGame = ({
               console.log('更新连接用户列表:', activeUsersList.length, '个用户');
             }
           } else {
-            console.log('游戏状态为空，断开连接');
-            setGameState(null);
-            setIsConnected(false);
-            setConnectedUsers([]);
+            // 只有在从未连接过的情况下才设置为断开连接
+            if (!hasConnectedRef.current) {
+              console.log('游戏状态为空，从未连接过，设置为断开');
+              setGameState(null);
+              setIsConnected(false);
+              setConnectedUsers([]);
+            } else {
+              console.log('游戏状态为空，但之前已连接过，保持连接状态');
+              // 保持连接状态，可能是暂时的网络问题或初始化延迟
+            }
           }
         });
 
@@ -270,7 +287,7 @@ export const useCollaborativeGame = ({
       unsubscribeRefs.current.forEach(unsubscribe => unsubscribe());
       unsubscribeRefs.current = [];
     };
-  }, [sessionId, user.id, user.name]);
+  }, [sessionId, user.id, user.name]); // 移除isConnected依赖
 
   // 在组件卸载时清理
   useEffect(() => {

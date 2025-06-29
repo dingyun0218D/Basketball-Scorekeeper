@@ -57,21 +57,36 @@ export class CloudbaseService {
 
   // 检查CloudBase是否可用
   private checkAvailability(): boolean {
-    return !!app && !!db;
+    const isAvailable = !!app && !!db;
+    if (!isAvailable) {
+      console.warn('CloudBase 不可用:', {
+        app: !!app,
+        db: !!db,
+        envId: import.meta.env.VITE_CLOUDBASE_ENV_ID,
+        region: import.meta.env.VITE_CLOUDBASE_REGION
+      });
+    }
+    return isAvailable;
   }
 
   // 获取数据库实例（带类型断言）
   private getDB(): CloudBaseDB {
+    if (!this.checkAvailability()) {
+      throw new Error('CloudBase 数据库不可用');
+    }
     return db as CloudBaseDB;
   }
 
   // 创建新游戏会话
   async createGameSession(gameState: GameState, sessionId: string): Promise<void> {
     if (!this.checkAvailability()) {
-      throw new Error('CloudBase 服务不可用');
+      const error = `CloudBase 服务不可用: app=${!!app}, db=${!!db}, envId=${!!import.meta.env.VITE_CLOUDBASE_ENV_ID}`;
+      console.error(error);
+      throw new Error(error);
     }
 
     try {
+      console.log('CloudBase 开始创建会话:', sessionId);
       await this.getDB().collection(this.gameCollection).doc(sessionId).set({
         ...gameState,
         sessionId,
@@ -82,7 +97,11 @@ export class CloudbaseService {
       console.log('CloudBase 会话创建成功:', sessionId);
     } catch (error) {
       console.error('CloudBase 创建会话失败:', error);
-      throw new Error('创建会话失败');
+      if (error instanceof Error) {
+        throw new Error(`CloudBase创建会话失败: ${error.message}`);
+      } else {
+        throw new Error('CloudBase创建会话失败: 未知错误');
+      }
     }
   }
 
