@@ -62,28 +62,60 @@ export class CollaborationServiceManager {
 
   // 检查指定服务是否可用
   isServiceAvailable(serviceType: CollaborationServiceType): boolean {
-    const service = this.getService(serviceType);
-    return service.isAvailable();
+    try {
+      const service = this.getService(serviceType);
+      const available = service.isAvailable();
+      console.log(`服务可用性检查 - ${serviceType}:`, available);
+      return available;
+    } catch (error) {
+      console.error(`检查服务可用性失败 - ${serviceType}:`, error);
+      return false;
+    }
   }
 
   // 获取所有可用的服务类型
   getAvailableServices(): CollaborationServiceType[] {
     const services: CollaborationServiceType[] = [];
     
+    console.log('开始检查所有服务的可用性...');
+    
     if (this.isServiceAvailable('firebase')) {
       services.push('firebase');
+      console.log('Firebase 服务可用');
+    } else {
+      console.log('Firebase 服务不可用');
     }
     
     if (this.isServiceAvailable('cloudbase')) {
       services.push('cloudbase');
+      console.log('CloudBase 服务可用');
+    } else {
+      console.log('CloudBase 服务不可用');
     }
     
+    console.log('可用服务列表:', services);
     return services;
   }
 
   // 代理方法 - 创建游戏会话
   async createGameSession(gameState: GameState, sessionId: string): Promise<void> {
-    return this.currentService.createGameSession(gameState, sessionId);
+    console.log('协作服务管理器 - 创建游戏会话:', {
+      sessionId,
+      currentService: this.serviceType,
+      serviceAvailable: this.currentService.isAvailable()
+    });
+    
+    try {
+      return await this.currentService.createGameSession(gameState, sessionId);
+    } catch (error) {
+      console.error('协作服务管理器 - 创建会话失败:', {
+        error,
+        sessionId,
+        serviceType: this.serviceType,
+        serviceName: SERVICE_NAMES[this.serviceType]
+      });
+      throw error;
+    }
   }
 
   // 代理方法 - 更新游戏状态

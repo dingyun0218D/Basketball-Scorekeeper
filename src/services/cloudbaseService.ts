@@ -58,12 +58,22 @@ export class CloudbaseService {
   // 检查CloudBase是否可用
   private checkAvailability(): boolean {
     const isAvailable = !!app && !!db;
+    console.log('CloudBase 可用性检查:', {
+      app: !!app,
+      db: !!db,
+      envId: import.meta.env.VITE_CLOUDBASE_ENV_ID,
+      region: import.meta.env.VITE_CLOUDBASE_REGION,
+      isAvailable
+    });
+    
     if (!isAvailable) {
-      console.warn('CloudBase 不可用:', {
-        app: !!app,
-        db: !!db,
-        envId: import.meta.env.VITE_CLOUDBASE_ENV_ID,
-        region: import.meta.env.VITE_CLOUDBASE_REGION
+      console.warn('CloudBase 不可用，详细信息:', {
+        app: app ? 'initialized' : 'null/undefined',
+        db: db ? 'initialized' : 'null/undefined',
+        envIdExists: !!import.meta.env.VITE_CLOUDBASE_ENV_ID,
+        envIdValue: import.meta.env.VITE_CLOUDBASE_ENV_ID ? 'configured' : 'not set',
+        regionExists: !!import.meta.env.VITE_CLOUDBASE_REGION,
+        regionValue: import.meta.env.VITE_CLOUDBASE_REGION || 'not set'
       });
     }
     return isAvailable;
@@ -79,28 +89,59 @@ export class CloudbaseService {
 
   // 创建新游戏会话
   async createGameSession(gameState: GameState, sessionId: string): Promise<void> {
+    console.log('CloudBase createGameSession 开始:', {
+      sessionId,
+      hasGameState: !!gameState,
+      serviceAvailable: this.checkAvailability()
+    });
+
     if (!this.checkAvailability()) {
       const error = `CloudBase 服务不可用: app=${!!app}, db=${!!db}, envId=${!!import.meta.env.VITE_CLOUDBASE_ENV_ID}`;
-      console.error(error);
+      console.error('CloudBase 不可用:', error);
       throw new Error(error);
     }
 
     try {
       console.log('CloudBase 开始创建会话:', sessionId);
-      await this.getDB().collection(this.gameCollection).doc(sessionId).set({
+      
+      const sessionData = {
         ...gameState,
         sessionId,
         createdAt: new Date(),
         updatedAt: new Date(),
         lastActiveAt: new Date()
+      };
+      
+      console.log('CloudBase 准备写入数据:', {
+        sessionId,
+        dataKeys: Object.keys(sessionData),
+        dataSize: JSON.stringify(sessionData).length
       });
+
+      await this.getDB().collection(this.gameCollection).doc(sessionId).set(sessionData);
       console.log('CloudBase 会话创建成功:', sessionId);
     } catch (error) {
-      console.error('CloudBase 创建会话失败:', error);
+      console.error('CloudBase 创建会话详细错误:', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : 'No stack trace',
+        errorType: typeof error,
+        errorConstructor: error?.constructor?.name,
+        sessionId
+      });
+      
       if (error instanceof Error) {
-        throw new Error(`CloudBase创建会话失败: ${error.message}`);
+        // 提取更多错误信息
+        let errorMessage = `CloudBase创建会话失败: ${error.message}`;
+        if (error.stack) {
+          console.error('错误堆栈:', error.stack);
+        }
+        throw new Error(errorMessage);
       } else {
-        throw new Error('CloudBase创建会话失败: 未知错误');
+        // 处理非Error类型的错误
+        const unknownError = JSON.stringify(error) || String(error) || '完全未知的错误类型';
+        console.error('非标准错误对象:', unknownError);
+        throw new Error(`CloudBase创建会话失败: 非标准错误 - ${unknownError}`);
       }
     }
   }
