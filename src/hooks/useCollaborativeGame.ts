@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { GameState, GameEvent, User } from '../types';
-import { collaborationServiceManager, CollaborationServiceType } from '../services/collaborationService';
+import { GameState, GameEvent, User, ServiceType } from '../types';
+import { collaborationServiceManager } from '../services/collaborationServiceManager';
 
 interface UseCollaborativeGameProps {
   sessionId?: string;
   user: User;
   initialGameState?: GameState;
+  serviceType?: ServiceType;
 }
 
 interface UseCollaborativeGameReturn {
@@ -15,21 +16,21 @@ interface UseCollaborativeGameReturn {
   isConnected: boolean;
   isHost: boolean;
   sessionId: string | null;
+  serviceType: ServiceType;
   createSession: (initialState: GameState) => Promise<string>;
   joinSession: (sessionId: string) => Promise<boolean>;
   updateGameState: (newState: GameState) => Promise<void>;
   addEvent: (event: Omit<GameEvent, 'id' | 'timestamp' | 'sessionId'>) => Promise<void>;
   leaveSession: () => void;
+  switchService: (newServiceType: ServiceType) => void;
   error: string | null;
-  currentServiceType: CollaborationServiceType;
-  availableServices: CollaborationServiceType[];
-  switchService: (serviceType: CollaborationServiceType) => void;
 }
 
 export const useCollaborativeGame = ({
   sessionId: initialSessionId,
   user,
-  initialGameState: _initialGameState
+  initialGameState: _initialGameState,
+  serviceType: initialServiceType = 'firebase'
 }: UseCollaborativeGameProps): UseCollaborativeGameReturn => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [events, setEvents] = useState<GameEvent[]>([]);
@@ -37,18 +38,17 @@ export const useCollaborativeGame = ({
   const [isConnected, setIsConnected] = useState(false);
   const [isHost, setIsHost] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId || null);
+  const [serviceType, setServiceType] = useState<ServiceType>(initialServiceType);
   const [error, setError] = useState<string | null>(null);
-  const [currentServiceType, setCurrentServiceType] = useState<CollaborationServiceType>(
-    collaborationServiceManager.getCurrentServiceType()
-  );
-  const [availableServices, setAvailableServices] = useState<CollaborationServiceType[]>(
-    collaborationServiceManager.getAvailableServices()
-  );
 
   // 用于存储取消订阅函数
   const unsubscribeRefs = useRef<Array<() => void>>([]);
-  // 跟踪是否已经成功连接过，避免依赖问题
-  const hasConnectedRef = useRef(false);
+
+  // 获取当前服务
+  const getCurrentService = useCallback(() => {
+    collaborationServiceManager.switchService(serviceType);
+    return collaborationServiceManager.getCurrentService();
+  }, [serviceType]);
 
   // 清理所有订阅
   const cleanup = useCallback(() => {
@@ -57,40 +57,21 @@ export const useCollaborativeGame = ({
     setIsConnected(false);
   }, []);
 
-  // 切换服务
-  const switchService = useCallback((serviceType: CollaborationServiceType) => {
-    if (sessionId) {
-      setError('请先离开当前会话再切换服务');
-      return;
-    }
-    
-    collaborationServiceManager.switchService(serviceType);
-    setCurrentServiceType(serviceType);
-    setAvailableServices(collaborationServiceManager.getAvailableServices());
-    setError(null);
-  }, [sessionId]);
-
   // 创建新会话
   const createSession = useCallback(async (initialState: GameState): Promise<string> => {
     try {
-      const newSessionId = collaborationServiceManager.generateSessionId();
+      const service = getCurrentService();
+      const newSessionId = service.generateSessionId();
       const stateWithSession = {
         ...initialState,
         sessionId: newSessionId,
         activeUsers: { [user.id]: new Date() }
       };
 
-      await collaborationServiceManager.createGameSession(stateWithSession, newSessionId);
+      await service.createGameSession(stateWithSession, newSessionId);
       setSessionId(newSessionId);
       setIsHost(true);
       setError(null);
-      
-      // 立即设置连接状态，避免等待监听回调
-      setIsConnected(true);
-      setGameState(stateWithSession);
-      hasConnectedRef.current = true; // 标记已经连接过
-      
-      console.log('会话创建成功:', newSessionId, '服务类型:', collaborationServiceManager.getCurrentServiceType());
       
       return newSessionId;
     } catch (err) {
@@ -98,12 +79,13 @@ export const useCollaborativeGame = ({
       setError(errorMessage);
       throw new Error(errorMessage);
     }
-  }, [user.id]);
+  }, [user.id, getCurrentService]);
 
   // 加入现有会话
   const joinSession = useCallback(async (targetSessionId: string): Promise<boolean> => {
     try {
-      const exists = await collaborationServiceManager.checkSessionExists(targetSessionId);
+      const service = getCurrentService();
+      const exists = await service.checkSessionExists(targetSessionId);
       if (!exists) {
         setError('会话不存在');
         return false;
@@ -114,13 +96,7 @@ export const useCollaborativeGame = ({
       setError(null);
       
       // 更新用户活动状态
-      await collaborationServiceManager.updateUserActivity(targetSessionId, user.id);
-      
-      // 立即设置连接状态
-      setIsConnected(true);
-      hasConnectedRef.current = true; // 标记已经连接过
-      
-      console.log('加入会话成功:', targetSessionId, '服务类型:', collaborationServiceManager.getCurrentServiceType());
+      await service.updateUserActivity(targetSessionId, user.id);
       
       return true;
     } catch (err) {
@@ -128,7 +104,7 @@ export const useCollaborativeGame = ({
       setError(errorMessage);
       return false;
     }
-  }, [user.id]);
+  }, [user.id, getCurrentService]);
 
   // 更新游戏状态
   const updateGameState = useCallback(async (newState: GameState): Promise<void> => {
@@ -138,6 +114,7 @@ export const useCollaborativeGame = ({
     }
 
     try {
+      const service = getCurrentService();
       const stateWithUserActivity = {
         ...newState,
         sessionId,
@@ -149,13 +126,13 @@ export const useCollaborativeGame = ({
         updatedAt: undefined as unknown as number
       };
 
-      await collaborationServiceManager.updateGameState(sessionId, stateWithUserActivity);
+      await service.updateGameState(sessionId, stateWithUserActivity);
       setError(null);
     } catch (err) {
       const errorMessage = '更新游戏状态失败: ' + (err as Error).message;
       setError(errorMessage);
     }
-  }, [sessionId, user.id]);
+  }, [sessionId, user.id, getCurrentService]);
 
   // 添加游戏事件
   const addEvent = useCallback(async (eventData: Omit<GameEvent, 'id' | 'timestamp' | 'sessionId'>): Promise<void> => {
@@ -165,6 +142,7 @@ export const useCollaborativeGame = ({
     }
 
     try {
+      const service = getCurrentService();
       const event: GameEvent = {
         ...eventData,
         id: '', // 将由服务生成
@@ -172,13 +150,13 @@ export const useCollaborativeGame = ({
         sessionId
       };
 
-      await collaborationServiceManager.addGameEvent(sessionId, event);
+      await service.addGameEvent(sessionId, event);
       setError(null);
     } catch (err) {
       const errorMessage = '添加事件失败: ' + (err as Error).message;
       setError(errorMessage);
     }
-  }, [sessionId]);
+  }, [sessionId, getCurrentService]);
 
   // 离开会话
   const leaveSession = useCallback(() => {
@@ -189,42 +167,42 @@ export const useCollaborativeGame = ({
     setConnectedUsers([]);
     setIsHost(false);
     setError(null);
-    hasConnectedRef.current = false; // 重置连接标记
   }, [cleanup]);
+
+  // 切换服务
+  const switchService = useCallback((newServiceType: ServiceType) => {
+    if (sessionId) {
+      // 如果有活跃会话，先离开
+      leaveSession();
+    }
+    setServiceType(newServiceType);
+    setError(null);
+  }, [sessionId, leaveSession]);
 
   // 监听游戏状态和事件
   useEffect(() => {
-    if (!sessionId) {
-      hasConnectedRef.current = false; // 重置连接标记
-      return;
-    }
+    if (!sessionId) return;
 
     let mounted = true;
 
     const startListening = async () => {
       try {
-        console.log('开始监听会话:', sessionId, '初始连接状态:', hasConnectedRef.current);
+        const service = getCurrentService();
         
         // 订阅游戏状态变化
-        const unsubscribeGameState = collaborationServiceManager.subscribeToGameState(sessionId, (state: GameState | null) => {
+        const unsubscribeGameState = service.subscribeToGameState(sessionId, (state) => {
           if (!mounted) return;
-          
-          console.log('收到协作状态更新:', state ? '有数据' : '无数据', '当前服务:', collaborationServiceManager.getCurrentServiceType());
           
           if (state) {
             setGameState(state);
-            if (!hasConnectedRef.current) {
-              console.log('首次收到状态，设置连接状态为已连接');
-              setIsConnected(true);
-              hasConnectedRef.current = true;
-            }
+            setIsConnected(true);
             
             // 更新连接用户列表
             if (state.activeUsers) {
               const now = new Date();
               const activeUsersList: User[] = Object.entries(state.activeUsers)
                 .filter(([, lastSeen]) => {
-                  const lastSeenDate = lastSeen instanceof Date ? lastSeen : new Date(lastSeen as string | number);
+                  const lastSeenDate = lastSeen instanceof Date ? lastSeen : new Date(lastSeen as any);
                   return (now.getTime() - lastSeenDate.getTime()) < 30000; // 30秒内活跃
                 })
                 .map(([userId]) => ({
@@ -234,24 +212,16 @@ export const useCollaborativeGame = ({
                 }));
               
               setConnectedUsers(activeUsersList);
-              console.log('更新连接用户列表:', activeUsersList.length, '个用户');
             }
           } else {
-            // 只有在从未连接过的情况下才设置为断开连接
-            if (!hasConnectedRef.current) {
-              console.log('游戏状态为空，从未连接过，设置为断开');
-              setGameState(null);
-              setIsConnected(false);
-              setConnectedUsers([]);
-            } else {
-              console.log('游戏状态为空，但之前已连接过，保持连接状态');
-              // 保持连接状态，可能是暂时的网络问题或初始化延迟
-            }
+            setGameState(null);
+            setIsConnected(false);
+            setConnectedUsers([]);
           }
         });
 
         // 订阅游戏事件变化
-        const unsubscribeEvents = collaborationServiceManager.subscribeToGameEvents(sessionId, (eventsList: GameEvent[]) => {
+        const unsubscribeEvents = service.subscribeToGameEvents(sessionId, (eventsList) => {
           if (!mounted) return;
           setEvents(eventsList);
         });
@@ -259,42 +229,21 @@ export const useCollaborativeGame = ({
         // 保存取消订阅函数
         unsubscribeRefs.current = [unsubscribeGameState, unsubscribeEvents];
 
-        // 定期更新用户活动状态
-        const activityInterval = setInterval(async () => {
-          if (mounted && sessionId) {
-            try {
-              await collaborationServiceManager.updateUserActivity(sessionId, user.id);
-            } catch (err) {
-              console.warn('更新用户活动状态失败:', err);
-            }
-          }
-        }, 15000); // 每15秒更新一次
-
-        return () => {
-          clearInterval(activityInterval);
-        };
       } catch (err) {
-        console.error('启动监听失败:', err);
-        setError('连接失败: ' + (err as Error).message);
+        if (mounted) {
+          const errorMessage = '连接协作服务失败: ' + (err as Error).message;
+          setError(errorMessage);
+        }
       }
     };
 
-    const cleanup = startListening();
+    startListening();
 
     return () => {
       mounted = false;
-      cleanup?.then(cleanupFn => cleanupFn?.());
-      unsubscribeRefs.current.forEach(unsubscribe => unsubscribe());
-      unsubscribeRefs.current = [];
-    };
-  }, [sessionId, user.id, user.name]); // 移除isConnected依赖
-
-  // 在组件卸载时清理
-  useEffect(() => {
-    return () => {
       cleanup();
     };
-  }, [cleanup]);
+  }, [sessionId, getCurrentService, user.id, user.name, cleanup]);
 
   return {
     gameState,
@@ -303,14 +252,13 @@ export const useCollaborativeGame = ({
     isConnected,
     isHost,
     sessionId,
+    serviceType,
     createSession,
     joinSession,
     updateGameState,
     addEvent,
     leaveSession,
-    error,
-    currentServiceType,
-    availableServices,
-    switchService
+    switchService,
+    error
   };
 }; 

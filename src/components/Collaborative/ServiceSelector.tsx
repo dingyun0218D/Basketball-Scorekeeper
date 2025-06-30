@@ -1,52 +1,52 @@
 import React from 'react';
-import { CollaborationServiceType, SERVICE_NAMES } from '../../services/collaborationService';
+import { ServiceType, ServiceConfig } from '../../types';
+import { collaborationServiceManager } from '../../services/collaborationServiceManager';
 
 interface ServiceSelectorProps {
-  currentService: CollaborationServiceType;
-  availableServices: CollaborationServiceType[];
-  onServiceChange: (service: CollaborationServiceType) => void;
+  currentService: ServiceType;
+  onServiceChange: (serviceType: ServiceType) => void;
   disabled?: boolean;
 }
 
-export const ServiceSelector: React.FC<ServiceSelectorProps> = ({
+const ServiceSelector: React.FC<ServiceSelectorProps> = ({
   currentService,
-  availableServices,
   onServiceChange,
   disabled = false
 }) => {
+  const availableServices = collaborationServiceManager.getAvailableServices();
+  const currentConfig = collaborationServiceManager.getServiceConfig(currentService);
+
+  const handleServiceChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newServiceType = event.target.value as ServiceType;
+    onServiceChange(newServiceType);
+  };
+
   return (
     <div className="service-selector">
-      <label htmlFor="service-select" className="block text-xs font-medium text-gray-600 mb-1">
-        协作服务
-      </label>
       <select
-        id="service-select"
         value={currentService}
-        onChange={(e) => onServiceChange(e.target.value as CollaborationServiceType)}
-        disabled={disabled || availableServices.length <= 1}
-        className="w-full text-xs px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+        onChange={handleServiceChange}
+        disabled={disabled}
+        className={`
+          px-3 py-1 text-sm border border-gray-300 rounded-md 
+          bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        `}
+        title="选择协作服务"
       >
-        {availableServices.map((service) => (
-          <option key={service} value={service}>
-            {SERVICE_NAMES[service]}
+        {availableServices.map((service: ServiceConfig) => (
+          <option key={service.type} value={service.type}>
+            {service.icon} {service.name}
           </option>
         ))}
       </select>
       
-      {availableServices.length <= 1 && (
-        <div className="text-xs text-gray-500 mt-1">
-          {availableServices.length === 0 
-            ? '⚠️ 没有可用的协作服务' 
-            : '只有一个服务可用'
-          }
-        </div>
-      )}
-      
-      {availableServices.length > 1 && (
-        <div className="text-xs text-gray-500 mt-1">
-          💡 可切换不同的后端服务
-        </div>
-      )}
+      {/* 服务描述提示 */}
+      <div className="text-xs text-gray-500 mt-1 text-right">
+        {currentConfig.description}
+      </div>
     </div>
   );
-}; 
+};
+
+export default ServiceSelector; 

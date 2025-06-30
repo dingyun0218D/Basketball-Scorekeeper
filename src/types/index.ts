@@ -141,4 +141,48 @@ export interface User {
   id: string;
   name: string;
   isHost?: boolean; // 是否为主机
+}
+
+// 协作服务类型
+export type ServiceType = 'firebase' | 'leancloud';
+
+// 协作服务接口
+export interface CollaborativeService {
+  // 创建新游戏会话
+  createGameSession(gameState: GameState, sessionId: string): Promise<void>;
+  
+  // 更新游戏状态
+  updateGameState(sessionId: string, gameState: GameState): Promise<void>;
+  
+  // 监听游戏状态变化
+  subscribeToGameState(sessionId: string, callback: (gameState: GameState | null) => void): () => void;
+  
+  // 添加游戏事件
+  addGameEvent(sessionId: string, event: GameEvent): Promise<void>;
+  
+  // 监听游戏事件
+  subscribeToGameEvents(sessionId: string, callback: (events: GameEvent[]) => void): () => void;
+  
+  // 检查会话是否存在
+  checkSessionExists(sessionId: string): Promise<boolean>;
+  
+  // 删除游戏会话
+  deleteGameSession(sessionId: string): Promise<void>;
+  
+  // 更新用户活动时间
+  updateUserActivity(sessionId: string, userId: string): Promise<void>;
+  
+  // 生成会话ID
+  generateSessionId(): string;
+  
+  // 服务名称
+  getServiceName(): string;
+}
+
+// 服务配置
+export interface ServiceConfig {
+  type: ServiceType;
+  name: string;
+  description: string;
+  icon: string;
 } 
