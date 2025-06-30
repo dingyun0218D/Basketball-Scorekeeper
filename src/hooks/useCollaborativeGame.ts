@@ -202,7 +202,7 @@ export const useCollaborativeGame = ({
               const now = new Date();
               const activeUsersList: User[] = Object.entries(state.activeUsers)
                 .filter(([, lastSeen]) => {
-                  const lastSeenDate = lastSeen instanceof Date ? lastSeen : new Date(lastSeen as any);
+                  const lastSeenDate = lastSeen instanceof Date ? lastSeen : new Date(lastSeen as string | number);
                   return (now.getTime() - lastSeenDate.getTime()) < 30000; // 30秒内活跃
                 })
                 .map(([userId]) => ({

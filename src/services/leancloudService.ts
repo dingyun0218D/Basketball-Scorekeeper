@@ -24,8 +24,9 @@ export class LeanCloudService implements CollaborativeService {
       query.limit(1);
       await query.find();
       this.initializedClasses.add(className);
-    } catch (error: any) {
-      if (error.code === 101 || error.message?.includes("doesn't exists")) {
+    } catch (error: unknown) {
+      const err = error as { code?: number; message?: string };
+      if (err.code === 101 || err.message?.includes("doesn't exists")) {
         // 类不存在，创建一个示例对象来初始化类
         console.log(`正在初始化 LeanCloud 类: ${className}`);
         try {
