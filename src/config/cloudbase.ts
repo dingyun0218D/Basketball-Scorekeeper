@@ -65,6 +65,7 @@ let isAuthenticated = false;
 
 // 认证状态 Promise，用于等待认证完成
 let authPromise: Promise<void> | null = null;
+let authError: Error | null = null;
 
 try {
   if (!missingEnvVars.length) {
@@ -80,16 +81,33 @@ try {
       .then(() => {
         console.log('CloudBase 匿名登录成功');
         isAuthenticated = true;
+        authError = null;
       })
       .catch((error: Error) => {
         const cloudbaseError = error as CloudBaseError;
-        console.error('CloudBase 匿名登录失败:', {
+        console.error('CloudBase 匿名登录失败，详细错误信息:', {
           error: error.message,
           stack: error.stack,
           code: cloudbaseError.code,
-          details: cloudbaseError.details
+          details: cloudbaseError.details,
+          name: error.name,
+          errorType: typeof error,
+          errorConstructor: error.constructor?.name
         });
+        
+        // 检查具体的错误类型
+        if (error.message.includes('permission denied') || error.message.includes('unauthorized')) {
+          console.error('❌ CloudBase 匿名登录权限被拒绝 - 请检查 CloudBase 控制台是否启用了匿名登录');
+        } else if (error.message.includes('network')) {
+          console.error('❌ CloudBase 匿名登录网络错误 - 请检查网络连接');
+        } else if (error.message.includes('invalid')) {
+          console.error('❌ CloudBase 匿名登录配置无效 - 请检查环境ID和区域配置');
+        } else {
+          console.error('❌ CloudBase 匿名登录未知错误');
+        }
+        
         isAuthenticated = false;
+        authError = error;
         throw error; // 重新抛出错误，让调用者知道登录失败
       });
   } else {
@@ -116,10 +134,11 @@ console.log('CloudBase 初始化完成，最终状态:', {
   appReady: !!app,
   dbReady: !!db,
   missingEnvVars: missingEnvVars.length,
-  isAvailable: !!app && !!db
+  isAvailable: !!app && !!db,
+  authPending: !!authPromise
 });
 
-// 等待认证完成的辅助函数
+// 等待认证完成的辅助函数（增强版）
 export const waitForAuth = async (): Promise<boolean> => {
   if (!authPromise) {
     console.warn('CloudBase 认证 Promise 不存在');
@@ -127,11 +146,50 @@ export const waitForAuth = async (): Promise<boolean> => {
   }
   
   try {
+    console.log('开始等待 CloudBase 认证完成...');
     await authPromise;
-    console.log('CloudBase 认证等待完成，状态:', isAuthenticated);
+    console.log('CloudBase 认证等待完成，最终状态:', {
+      isAuthenticated,
+      hasError: !!authError,
+      errorMessage: authError?.message
+    });
     return isAuthenticated;
   } catch (error) {
-    console.error('CloudBase 认证等待失败:', error);
+    console.error('CloudBase 认证等待失败，详细信息:', {
+      error,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      isAuthenticated,
+      authError: authError?.message
+    });
+    return false;
+  }
+};
+
+// 获取认证错误信息
+export const getAuthError = (): Error | null => {
+  return authError;
+};
+
+// 重试认证
+export const retryAuth = async (): Promise<boolean> => {
+  if (!app) {
+    console.error('CloudBase app 未初始化，无法重试认证');
+    return false;
+  }
+  
+  console.log('开始重试 CloudBase 认证...');
+  isAuthenticated = false;
+  authError = null;
+  
+  try {
+    await app.auth().signInAnonymously();
+    console.log('CloudBase 认证重试成功');
+    isAuthenticated = true;
+    return true;
+  } catch (error) {
+    console.error('CloudBase 认证重试失败:', error);
+    authError = error as Error;
+    isAuthenticated = false;
     return false;
   }
 };

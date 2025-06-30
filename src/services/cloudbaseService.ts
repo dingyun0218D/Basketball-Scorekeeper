@@ -1,4 +1,4 @@
-import { app, db, isAuthenticated, waitForAuth } from '../config/cloudbase';
+import { app, db, isAuthenticated, waitForAuth, getAuthError, retryAuth } from '../config/cloudbase';
 import { GameState, GameEvent } from '../types';
 
 // CloudBase 数据库类型定义
@@ -55,8 +55,8 @@ export class CloudbaseService {
   private gameCollection = 'games';
   private eventsCollection = 'events';
 
-  // 检查CloudBase是否可用并已认证
-  private async checkAvailabilityAndAuth(): Promise<boolean> {
+  // 检查CloudBase是否可用并已认证（增强版）
+  private async checkAvailabilityAndAuth(allowRetry: boolean = true): Promise<boolean> {
     const basicAvailability = !!app && !!db;
     console.log('CloudBase 基础可用性检查:', {
       app: !!app,
@@ -68,7 +68,7 @@ export class CloudbaseService {
     });
     
     if (!basicAvailability) {
-      console.warn('CloudBase 不可用，详细信息:', {
+      console.warn('CloudBase 基础服务不可用:', {
         app: app ? 'initialized' : 'null/undefined',
         db: db ? 'initialized' : 'null/undefined',
         envIdExists: !!import.meta.env.VITE_CLOUDBASE_ENV_ID,
@@ -83,7 +83,31 @@ export class CloudbaseService {
     if (!isAuthenticated) {
       console.log('CloudBase 需要等待认证完成...');
       const authSuccess = await waitForAuth();
+      
       if (!authSuccess) {
+        // 获取详细的认证错误信息
+        const authError = getAuthError();
+        console.error('CloudBase 认证失败，详细信息:', {
+          authError: authError?.message,
+          authErrorStack: authError?.stack,
+          isAuthenticated,
+          allowRetry
+        });
+        
+        // 如果允许重试且是第一次失败，尝试重试认证
+        if (allowRetry) {
+          console.log('尝试重试 CloudBase 认证...');
+          const retrySuccess = await retryAuth();
+          
+          if (retrySuccess) {
+            console.log('CloudBase 认证重试成功');
+            return true;
+          } else {
+            console.error('CloudBase 认证重试也失败了');
+            return false;
+          }
+        }
+        
         console.error('CloudBase 认证失败，无法使用数据库服务');
         return false;
       }
@@ -126,7 +150,7 @@ export class CloudbaseService {
     return db as CloudBaseDB;
   }
 
-  // 创建新游戏会话
+  // 创建新游戏会话（增强版）
   async createGameSession(gameState: GameState, sessionId: string): Promise<void> {
     console.log('CloudBase createGameSession 开始:', {
       sessionId,
@@ -134,10 +158,11 @@ export class CloudbaseService {
       basicAvailable: this.checkAvailability()
     });
 
-    // 等待认证完成
-    const isReady = await this.checkAvailabilityAndAuth();
+    // 等待认证完成（允许重试）
+    const isReady = await this.checkAvailabilityAndAuth(true);
     if (!isReady) {
-      const error = `CloudBase 服务不可用或认证失败: app=${!!app}, db=${!!db}, auth=${isAuthenticated}, envId=${!!import.meta.env.VITE_CLOUDBASE_ENV_ID}`;
+      const authError = getAuthError();
+      const error = `CloudBase 服务不可用或认证失败: app=${!!app}, db=${!!db}, auth=${isAuthenticated}, envId=${!!import.meta.env.VITE_CLOUDBASE_ENV_ID}, authError=${authError?.message || 'none'}`;
       console.error('CloudBase 不可用:', error);
       throw new Error(error);
     }
@@ -170,7 +195,8 @@ export class CloudbaseService {
         errorType: typeof error,
         errorConstructor: error?.constructor?.name,
         sessionId,
-        authenticated: isAuthenticated
+        authenticated: isAuthenticated,
+        authError: getAuthError()?.message
       });
       
       if (error instanceof Error) {
@@ -191,10 +217,11 @@ export class CloudbaseService {
 
   // 更新游戏状态
   async updateGameState(sessionId: string, gameState: GameState): Promise<void> {
-    // 等待认证完成
-    const isReady = await this.checkAvailabilityAndAuth();
+    // 等待认证完成（允许重试）
+    const isReady = await this.checkAvailabilityAndAuth(true);
     if (!isReady) {
-      throw new Error('CloudBase 服务不可用或认证失败');
+      const authError = getAuthError();
+      throw new Error(`CloudBase 服务不可用或认证失败: authError=${authError?.message || 'none'}`);
     }
 
     try {
@@ -226,12 +253,13 @@ export class CloudbaseService {
     let watcher: CloudBaseWatcher | null = null;
     let mounted = true;
 
-    // 异步等待认证并开始监听
-    this.checkAvailabilityAndAuth().then((isReady) => {
+    // 异步等待认证并开始监听（允许重试）
+    this.checkAvailabilityAndAuth(true).then((isReady) => {
       if (!mounted) return; // 如果已经取消订阅，不再继续
       
       if (!isReady) {
-        console.warn('CloudBase 认证失败，无法监听游戏状态');
+        const authError = getAuthError();
+        console.warn('CloudBase 认证失败，无法监听游戏状态:', authError?.message);
         callback(null);
         return;
       }
@@ -285,10 +313,11 @@ export class CloudbaseService {
 
   // 添加游戏事件
   async addGameEvent(sessionId: string, event: GameEvent): Promise<void> {
-    // 等待认证完成
-    const isReady = await this.checkAvailabilityAndAuth();
+    // 等待认证完成（允许重试）
+    const isReady = await this.checkAvailabilityAndAuth(true);
     if (!isReady) {
-      throw new Error('CloudBase 服务不可用或认证失败');
+      const authError = getAuthError();
+      throw new Error(`CloudBase 服务不可用或认证失败: authError=${authError?.message || 'none'}`);
     }
 
     try {
@@ -316,12 +345,13 @@ export class CloudbaseService {
     let watcher: CloudBaseWatcher | null = null;
     let mounted = true;
 
-    // 异步等待认证并开始监听
-    this.checkAvailabilityAndAuth().then((isReady) => {
+    // 异步等待认证并开始监听（允许重试）
+    this.checkAvailabilityAndAuth(true).then((isReady) => {
       if (!mounted) return; // 如果已经取消订阅，不再继续
       
       if (!isReady) {
-        console.warn('CloudBase 认证失败，无法监听游戏事件');
+        const authError = getAuthError();
+        console.warn('CloudBase 认证失败，无法监听游戏事件:', authError?.message);
         callback([]);
         return;
       }
@@ -374,8 +404,8 @@ export class CloudbaseService {
 
   // 检查会话是否存在
   async checkSessionExists(sessionId: string): Promise<boolean> {
-    // 等待认证完成
-    const isReady = await this.checkAvailabilityAndAuth();
+    // 等待认证完成（允许重试）
+    const isReady = await this.checkAvailabilityAndAuth(true);
     if (!isReady) {
       return false;
     }
@@ -391,10 +421,11 @@ export class CloudbaseService {
 
   // 删除游戏会话
   async deleteGameSession(sessionId: string): Promise<void> {
-    // 等待认证完成
-    const isReady = await this.checkAvailabilityAndAuth();
+    // 等待认证完成（允许重试）
+    const isReady = await this.checkAvailabilityAndAuth(true);
     if (!isReady) {
-      throw new Error('CloudBase 服务不可用或认证失败');
+      const authError = getAuthError();
+      throw new Error(`CloudBase 服务不可用或认证失败: authError=${authError?.message || 'none'}`);
     }
 
     try {
@@ -407,10 +438,11 @@ export class CloudbaseService {
 
   // 更新用户活动时间
   async updateUserActivity(sessionId: string, userId: string): Promise<void> {
-    // 等待认证完成
-    const isReady = await this.checkAvailabilityAndAuth();
+    // 等待认证完成（允许重试）
+    const isReady = await this.checkAvailabilityAndAuth(true);
     if (!isReady) {
-      throw new Error('CloudBase 服务不可用或认证失败');
+      const authError = getAuthError();
+      throw new Error(`CloudBase 服务不可用或认证失败: authError=${authError?.message || 'none'}`);
     }
 
     try {
