@@ -56,6 +56,10 @@ jobs:
         VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
         VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
         VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+        # LeanCloud 环境变量
+        VITE_LEANCLOUD_APP_ID: ${{ secrets.VITE_LEANCLOUD_APP_ID }}
+        VITE_LEANCLOUD_APP_KEY: ${{ secrets.VITE_LEANCLOUD_APP_KEY }}
+        VITE_LEANCLOUD_SERVER_URL: ${{ secrets.VITE_LEANCLOUD_SERVER_URL }}
         
     - name: 上传构建产物
       uses: actions/upload-pages-artifact@v3
