@@ -28,6 +28,8 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   const [joinSessionId, setJoinSessionId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showServiceSwitchConfirm, setShowServiceSwitchConfirm] = useState(false);
+  const [pendingServiceType, setPendingServiceType] = useState<ServiceType | null>(null);
   const [selectedServiceType, setSelectedServiceType] = useState<ServiceType>('firebase');
   const lastSyncTime = useRef<number>(0);
   
@@ -67,15 +69,29 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   // 处理服务切换
   const handleServiceChange = (newServiceType: ServiceType) => {
     if (isConnected) {
-      // 如果正在连接中，显示确认对话框
-      if (window.confirm('切换服务将断开当前连接，确定要继续吗？')) {
-        switchService(newServiceType);
-        setSelectedServiceType(newServiceType);
-      }
+      // 如果正在连接中，显示确认弹窗
+      setPendingServiceType(newServiceType);
+      setShowServiceSwitchConfirm(true);
     } else {
       setSelectedServiceType(newServiceType);
       switchService(newServiceType);
     }
+  };
+
+  // 确认切换服务
+  const confirmServiceSwitch = () => {
+    if (pendingServiceType) {
+      switchService(pendingServiceType);
+      setSelectedServiceType(pendingServiceType);
+      setPendingServiceType(null);
+    }
+    setShowServiceSwitchConfirm(false);
+  };
+
+  // 取消切换服务
+  const cancelServiceSwitch = () => {
+    setPendingServiceType(null);
+    setShowServiceSwitchConfirm(false);
   };
 
   // 同步协作状态到本地状态
@@ -173,23 +189,25 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
     return (
       <>
         <div className="collaborative-game-manager p-4 border rounded-lg bg-green-50">
-          <div className="flex items-center justify-between mb-4">
-            <div>
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
               <h3 className="text-lg font-semibold text-green-800">
                 实时协作模式 {isHost && '(主机)'}
               </h3>
               <p className="text-green-600">会话ID: {sessionId}</p>
             </div>
-            <div className="flex items-center gap-3">
-              {/* 服务选择器 */}
+            <div className="flex flex-col items-end gap-2">
+              {/* 服务选择器保持在右上角 */}
               <ServiceSelector 
                 currentService={serviceType}
                 onServiceChange={handleServiceChange}
                 disabled={isLoading}
+                showDescription={false}
               />
+              {/* 离开会话按钮放在服务选择器下方 */}
               <button
                 onClick={handleLeaveSession}
-                className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
               >
                 离开会话
               </button>
@@ -200,6 +218,9 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               <span className="text-green-700">已连接</span>
+              <span className="text-xs text-gray-500">
+                ({serviceType === 'firebase' ? '🔥 Firebase' : '☁️ LeanCloud'})
+              </span>
             </div>
             
             <div className="text-sm text-gray-600">
@@ -228,6 +249,23 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
           cancelText="取消"
           onConfirm={confirmLeaveSession}
           onCancel={cancelLeaveSession}
+          type="warning"
+        />
+
+        {/* 切换服务确认弹窗 */}
+        <ConfirmModal
+          isOpen={showServiceSwitchConfirm}
+          title="切换协作服务"
+          message="切换服务将断开当前连接，确定要继续吗？"
+          details={[
+            `当前服务：${serviceType === 'firebase' ? '🔥 Firebase' : '☁️ LeanCloud'}`,
+            `目标服务：${pendingServiceType === 'firebase' ? '🔥 Firebase' : '☁️ LeanCloud'}`,
+            `会话ID：${sessionId}`
+          ]}
+          confirmText="确定切换"
+          cancelText="取消"
+          onConfirm={confirmServiceSwitch}
+          onCancel={cancelServiceSwitch}
           type="warning"
         />
       </>
