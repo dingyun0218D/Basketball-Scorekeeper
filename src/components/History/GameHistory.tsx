@@ -17,7 +17,7 @@ interface GameHistoryProps {
 }
 
 export const GameHistory: React.FC<GameHistoryProps> = ({ currentGame }) => {
-  const { dispatch } = useGame();
+  const { loadArchive } = useGame();
   const [archives, setArchives] = useState<GameArchive[]>(getGameArchives());
   const [historyGames] = useState(getGameHistory());
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -57,11 +57,11 @@ export const GameHistory: React.FC<GameHistoryProps> = ({ currentGame }) => {
   };
 
   // 加载存档继续比赛
-  const handleLoadArchive = (archiveId: string) => {
+  const handleLoadArchive = async (archiveId: string) => {
     if (confirm('加载此存档将覆盖当前比赛数据，确定继续吗？')) {
       const gameState = loadGameArchive(archiveId);
       if (gameState) {
-        dispatch({ type: 'LOAD_ARCHIVE', payload: gameState });
+        await loadArchive(gameState);
         alert('存档已加载，可以继续比赛！');
       } else {
         alert('加载存档失败');

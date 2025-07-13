@@ -88,7 +88,8 @@ export const AppEventDrivenGameProvider: React.FC<AppEventDrivenGameProviderProp
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [collaborationService] = useState(() => new MockEventDrivenCollaborativeService());
   const [user] = useState<User>(DEFAULT_USER);
-  const [sessionId] = useState<string | undefined>();
+  // 为本地使用创建默认会话ID
+  const [sessionId] = useState<string>(() => `local_session_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
 
   // 加载保存的游戏状态
   useEffect(() => {
@@ -138,7 +139,7 @@ export const AppEventDrivenGameProvider: React.FC<AppEventDrivenGameProviderProp
   }
 
   return (
-    <EventDrivenGameProvider
+    <EventDrivenGameProvider 
       sessionId={sessionId}
       user={user}
       initialGameState={gameState}

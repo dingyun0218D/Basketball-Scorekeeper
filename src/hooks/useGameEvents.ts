@@ -13,35 +13,41 @@ export const useGameEvents = ({
   setShowConfirmModal, 
   setShowResetConfirmModal 
 }: UseGameEventsProps) => {
-  const { gameState, dispatch } = useGame();
+  const { 
+    gameState, 
+    addScore, 
+    addFoul, 
+    addPlayer, 
+    removePlayer, 
+    updatePlayerStat, 
+    addShotAttempt, 
+    undoScore, 
+    togglePlayerCourtStatus, 
+    startTimer, 
+    pauseTimer, 
+    resumeTimer, 
+    stopTimer, 
+    nextQuarter, 
+    updateTime, 
+    setQuarterTime, 
+    resetGame, 
+    updateTeam 
+  } = useGame();
 
   // 处理得分更新
-  const handleScoreUpdate = (teamId: string, points: number, playerId?: string) => {
-    dispatch({
-      type: 'UPDATE_SCORE',
-      payload: { 
-        teamId, 
-        points, 
-        playerId,
-        scoreType: points === 1 ? '1' : points === 2 ? '2' : '3'
-      }
-    });
+  const handleScoreUpdate = async (teamId: string, points: number, playerId?: string) => {
+    const scoreType = points === 1 ? 'free-throw' : points === 2 ? '2' : '3';
+    await addScore(teamId, points, playerId, scoreType);
   };
 
   // 处理球员统计更新
-  const handlePlayerStatUpdate = (teamId: string, playerId: string, stat: string, value: number) => {
-    dispatch({
-      type: 'UPDATE_PLAYER_STAT',
-      payload: { teamId, playerId, stat, value }
-    });
+  const handlePlayerStatUpdate = async (teamId: string, playerId: string, stat: string, value: number) => {
+    await updatePlayerStat(teamId, playerId, stat, value);
   };
 
   // 处理犯规
-  const handleAddFoul = (teamId: string, playerId: string) => {
-    dispatch({
-      type: 'ADD_FOUL',
-      payload: { teamId, playerId }
-    });
+  const handleAddFoul = async (teamId: string, playerId: string) => {
+    await addFoul(teamId, playerId);
   };
 
   // 处理球员移除
@@ -63,12 +69,9 @@ export const useGameEvents = ({
   };
 
   // 确认删除球员
-  const confirmRemovePlayer = (playerToDelete: PlayerToDelete | null) => {
+  const confirmRemovePlayer = async (playerToDelete: PlayerToDelete | null) => {
     if (playerToDelete) {
-      dispatch({
-        type: 'REMOVE_PLAYER',
-        payload: { teamId: playerToDelete.teamId, playerId: playerToDelete.playerId }
-      });
+      await removePlayer(playerToDelete.teamId, playerToDelete.playerId);
     }
     setShowConfirmModal(false);
     setPlayerToDelete(null);
@@ -81,48 +84,37 @@ export const useGameEvents = ({
   };
 
   // 处理添加球员
-  const handleAddPlayer = (teamId: string, player: Player) => {
-    dispatch({
-      type: 'ADD_PLAYER',
-      payload: { teamId, player }
-    });
+  const handleAddPlayer = async (teamId: string, player: Player) => {
+    await addPlayer(teamId, player);
   };
 
   // 处理出手统计
-  const handleShotAttempt = (teamId: string, playerId: string, shotType: 'field' | 'three' | 'free') => {
-    dispatch({
-      type: 'ADD_SHOT_ATTEMPT',
-      payload: { teamId, playerId, shotType }
-    });
+  const handleShotAttempt = async (teamId: string, playerId: string, shotType: 'field' | 'three' | 'free') => {
+    await addShotAttempt(teamId, playerId, shotType);
   };
 
   // 处理撤销得分
-  const handleUndoScore = (teamId: string, playerId: string, scoreType: '1' | '2' | '3') => {
-    dispatch({
-      type: 'UNDO_SCORE',
-      payload: { teamId, playerId, scoreType }
-    });
+  const handleUndoScore = async (teamId: string, playerId: string, scoreType: '1' | '2' | '3') => {
+    const actualScoreType = scoreType === '1' ? 'free-throw' : scoreType === '2' ? '2' : '3';
+    await undoScore(teamId, playerId, actualScoreType);
   };
 
   // 处理球员上场状态切换
-  const handleTogglePlayerCourtStatus = (teamId: string, playerId: string) => {
-    dispatch({
-      type: 'TOGGLE_PLAYER_COURT_STATUS',
-      payload: { teamId, playerId }
-    });
+  const handleTogglePlayerCourtStatus = async (teamId: string, playerId: string) => {
+    await togglePlayerCourtStatus(teamId, playerId);
   };
 
   // 计时器控制函数
-  const handleStartTimer = () => dispatch({ type: 'START_TIMER' });
-  const handlePauseTimer = () => dispatch({ type: 'PAUSE_TIMER' });
-  const handleResumeTimer = () => dispatch({ type: 'RESUME_TIMER' });
-  const handleStopTimer = () => dispatch({ type: 'STOP_TIMER' });
-  const handleNextQuarter = () => dispatch({ type: 'NEXT_QUARTER' });
-  const handleTimeChange = (time: string) => {
-    dispatch({ type: 'UPDATE_TIME', payload: { time } });
+  const handleStartTimer = async () => await startTimer();
+  const handlePauseTimer = async () => await pauseTimer();
+  const handleResumeTimer = async () => await resumeTimer();
+  const handleStopTimer = async () => await stopTimer();
+  const handleNextQuarter = async () => await nextQuarter();
+  const handleTimeChange = async (time: string) => {
+    await updateTime(time);
   };
-  const handleQuarterTimeChange = (time: string) => {
-    dispatch({ type: 'SET_QUARTER_TIME', payload: { time } });
+  const handleQuarterTimeChange = async (time: string) => {
+    await setQuarterTime(time);
   };
 
   // 处理重置游戏
@@ -131,8 +123,8 @@ export const useGameEvents = ({
   };
 
   // 确认重置比赛
-  const confirmResetGame = () => {
-    dispatch({ type: 'RESET_GAME' });
+  const confirmResetGame = async () => {
+    await resetGame();
     setShowResetConfirmModal(false);
   };
 
@@ -141,25 +133,27 @@ export const useGameEvents = ({
     setShowResetConfirmModal(false);
   };
 
-  // 处理队名更新
-  const handleTeamNameUpdate = (teamId: string, newName: string) => {
-    dispatch({
-      type: 'UPDATE_TEAM',
-      payload: { teamId, updates: { name: newName } }
-    });
+  // 处理团队名称更新
+  const handleTeamNameUpdate = async (teamId: string, newName: string) => {
+    await updateTeam(teamId, { name: newName });
   };
 
   return {
+    // 得分相关
     handleScoreUpdate,
+    handleUndoScore,
+    handleShotAttempt,
+    
+    // 球员相关
     handlePlayerStatUpdate,
     handleAddFoul,
     handleRemovePlayer,
     confirmRemovePlayer,
     cancelRemovePlayer,
     handleAddPlayer,
-    handleShotAttempt,
-    handleUndoScore,
     handleTogglePlayerCourtStatus,
+    
+    // 计时器相关
     handleStartTimer,
     handlePauseTimer,
     handleResumeTimer,
@@ -167,9 +161,13 @@ export const useGameEvents = ({
     handleNextQuarter,
     handleTimeChange,
     handleQuarterTimeChange,
+    
+    // 游戏控制
     handleResetGame,
     confirmResetGame,
     cancelResetGame,
-    handleTeamNameUpdate,
+    
+    // 团队管理
+    handleTeamNameUpdate
   };
 }; 

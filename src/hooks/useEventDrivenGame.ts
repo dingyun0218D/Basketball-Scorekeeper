@@ -34,8 +34,13 @@ export const useEventDrivenGame = (props: UseEventDrivenGameProps) => {
       eventFactory.current = createEventFactory(sessionId, user.id);
       eventSequenceManager.current = new EventSequenceManager(sessionId);
       baseGameState.current = initialGameState || null;
+      
+      // 如果有初始游戏状态，设置为当前状态
+      if (initialGameState && !gameState) {
+        setGameState(initialGameState);
+      }
     }
-  }, [sessionId, user.id, initialGameState]);
+  }, [sessionId, user.id, initialGameState, gameState]);
 
   // 重建游戏状态
   useEffect(() => {
@@ -50,7 +55,14 @@ export const useEventDrivenGame = (props: UseEventDrivenGameProps) => {
   // 发送事件的通用方法
   const sendEvent = useCallback(async (event: GameEvent): Promise<void> => {
     if (!sessionId || !eventSequenceManager.current) {
-      throw new Error('未连接到会话');
+      console.warn('未连接到会话，事件将仅在本地处理');
+      
+      // 如果没有会话，仅在本地应用事件
+      if (gameState) {
+        const newState = EventApplier.applyEvent(gameState, event);
+        setGameState(newState);
+      }
+      return;
     }
 
     try {
@@ -106,8 +118,16 @@ export const useEventDrivenGame = (props: UseEventDrivenGameProps) => {
     eventType: string, 
     ...args: unknown[]
   ): Promise<void> => {
-    if (!eventFactory.current || !gameState) {
-      throw new Error('事件工厂未初始化或游戏状态不可用');
+    if (!gameState) {
+      console.warn('游戏状态不可用，无法创建事件');
+      return;
+    }
+
+    // 如果没有事件工厂，创建一个临时的
+    let factory = eventFactory.current;
+    if (!factory) {
+      const tempSessionId = sessionId || 'temp_session';
+      factory = createEventFactory(tempSessionId, user.id);
     }
 
     let event: GameEvent;
@@ -115,7 +135,7 @@ export const useEventDrivenGame = (props: UseEventDrivenGameProps) => {
     switch (eventType) {
       case 'SCORE': {
         const [teamId, playerId, points, scoreType] = args;
-        event = eventFactory.current.createScoreEvent(
+        event = factory.createScoreEvent(
           teamId as string, playerId as string, points as (1 | 2 | 3), scoreType as ('field_goal' | 'three_pointer' | 'free_throw'), 
           gameState.quarter, gameState.time
         );
@@ -124,7 +144,7 @@ export const useEventDrivenGame = (props: UseEventDrivenGameProps) => {
       
       case 'FOUL': {
         const [foulTeamId, foulPlayerId, foulType] = args;
-        event = eventFactory.current.createFoulEvent(
+        event = factory.createFoulEvent(
           foulTeamId as string, foulPlayerId as string, foulType as ('personal' | 'technical' | 'flagrant' | 'offensive'),
           gameState.quarter, gameState.time
         );
@@ -136,7 +156,7 @@ export const useEventDrivenGame = (props: UseEventDrivenGameProps) => {
     }
     
     await sendEvent(event);
-  }, [gameState, sendEvent]);
+  }, [gameState, sendEvent, sessionId, user.id]);
 
   // 具体的事件发送方法
   const sendScoreEvent = useCallback(async (
@@ -145,47 +165,78 @@ export const useEventDrivenGame = (props: UseEventDrivenGameProps) => {
     points: 1 | 2 | 3, 
     scoreType: 'field_goal' | 'three_pointer' | 'free_throw'
   ): Promise<void> => {
-    if (!eventFactory.current || !gameState) return;
+    if (!gameState) {
+      console.warn('游戏状态不可用，无法发送得分事件');
+      return;
+    }
     
-    const event = eventFactory.current.createScoreEvent(
+    // 如果没有事件工厂，创建一个临时的
+    let factory = eventFactory.current;
+    if (!factory) {
+      const tempSessionId = sessionId || 'temp_session';
+      factory = createEventFactory(tempSessionId, user.id);
+    }
+    
+    const event = factory.createScoreEvent(
       teamId, playerId, points, scoreType,
       gameState.quarter, gameState.time
     );
     
     await sendEvent(event);
-  }, [gameState, sendEvent]);
+  }, [gameState, sendEvent, sessionId, user.id]);
 
   const sendFoulEvent = useCallback(async (
     teamId: string, 
     playerId: string, 
     foulType: 'personal' | 'technical' | 'flagrant' | 'offensive'
   ): Promise<void> => {
-    if (!eventFactory.current || !gameState) return;
+    if (!gameState) {
+      console.warn('游戏状态不可用，无法发送犯规事件');
+      return;
+    }
     
-    const event = eventFactory.current.createFoulEvent(
+    // 如果没有事件工厂，创建一个临时的
+    let factory = eventFactory.current;
+    if (!factory) {
+      const tempSessionId = sessionId || 'temp_session';
+      factory = createEventFactory(tempSessionId, user.id);
+    }
+    
+    const event = factory.createFoulEvent(
       teamId, playerId, foulType,
       gameState.quarter, gameState.time
     );
     
     await sendEvent(event);
-  }, [gameState, sendEvent]);
+  }, [gameState, sendEvent, sessionId, user.id]);
 
   const sendGameControlEvent = useCallback(async (
     action: 'START' | 'PAUSE' | 'RESUME' | 'STOP' | 'NEXT_QUARTER' | 'RESET'
   ): Promise<void> => {
-    if (!eventFactory.current || !gameState) return;
+    if (!gameState) {
+      console.warn('游戏状态不可用，无法发送游戏控制事件');
+      return;
+    }
     
-    const event = eventFactory.current.createGameControlEvent(
+    // 如果没有事件工厂，创建一个临时的
+    let factory = eventFactory.current;
+    if (!factory) {
+      const tempSessionId = sessionId || 'temp_session';
+      factory = createEventFactory(tempSessionId, user.id);
+    }
+    
+    const event = factory.createGameControlEvent(
       action, gameState.quarter, gameState.time
     );
     
     await sendEvent(event);
-  }, [gameState, sendEvent]);
+  }, [gameState, sendEvent, sessionId, user.id]);
 
   // 连接管理
   const connect = useCallback(async (): Promise<void> => {
     if (!sessionId) {
-      throw new Error('会话ID不能为空');
+      console.warn('没有会话ID，无法连接');
+      return;
     }
 
     try {
