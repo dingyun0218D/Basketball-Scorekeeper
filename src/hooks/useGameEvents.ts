@@ -46,6 +46,8 @@ export const useGameEvents = ({
 
   // 处理球员移除
   const handleRemovePlayer = (teamId: string, playerId: string) => {
+    if (!gameState) return;
+    
     // 找到要删除的球员信息
     const team = teamId === gameState.homeTeam.id ? gameState.homeTeam : gameState.awayTeam;
     const player = team.players.find(p => p.id === playerId);
