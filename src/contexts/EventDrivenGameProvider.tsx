@@ -88,8 +88,8 @@ export const AppEventDrivenGameProvider: React.FC<AppEventDrivenGameProviderProp
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [collaborationService] = useState(() => new MockEventDrivenCollaborativeService());
   const [user] = useState<User>(DEFAULT_USER);
-  // 为本地使用创建默认会话ID
-  const [sessionId] = useState<string>(() => `local_session_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
+  // 为本地使用创建默认会话ID，但不暴露给协作系统
+  const [localSessionId] = useState<string>(() => `local_session_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`);
 
   // 加载保存的游戏状态
   useEffect(() => {
@@ -123,9 +123,9 @@ export const AppEventDrivenGameProvider: React.FC<AppEventDrivenGameProviderProp
       awayTeamName: gameState?.awayTeam?.name,
       quarter: gameState?.quarter,
       time: gameState?.time,
-      sessionId
+      localSessionId
     });
-  }, [gameState, sessionId]);
+  }, [gameState, localSessionId]);
 
   if (!gameState) {
     return (
@@ -140,7 +140,7 @@ export const AppEventDrivenGameProvider: React.FC<AppEventDrivenGameProviderProp
 
   return (
     <EventDrivenGameProvider 
-      sessionId={sessionId}
+      sessionId={localSessionId}
       user={user}
       initialGameState={gameState}
       collaborationService={collaborationService}

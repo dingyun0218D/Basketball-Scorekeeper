@@ -30,6 +30,7 @@ export const EventDrivenGameProvider: React.FC<EventDrivenGameProviderProps> = (
   collaborationService
 }) => {
   const [currentSessionId, setCurrentSessionId] = React.useState<string | undefined>(sessionId);
+  const [collaborativeSessionId, setCollaborativeSessionId] = React.useState<string | undefined>();
   
   // 使用事件驱动游戏Hook
   const eventDrivenGame = useEventDrivenGame({
@@ -38,6 +39,17 @@ export const EventDrivenGameProvider: React.FC<EventDrivenGameProviderProps> = (
     initialGameState,
     service: collaborationService
   });
+
+  // 设置会话ID的方法
+  const setSessionId = React.useCallback((newSessionId: string) => {
+    setCurrentSessionId(newSessionId);
+    // 只有非本地会话才设置为协作会话
+    if (!newSessionId.startsWith('local_session_')) {
+      setCollaborativeSessionId(newSessionId);
+    } else {
+      setCollaborativeSessionId(undefined);
+    }
+  }, []);
 
   // 创建高级操作方法
   const addScore = React.useCallback(async (
@@ -225,9 +237,9 @@ export const EventDrivenGameProvider: React.FC<EventDrivenGameProviderProps> = (
     startNewGame,
     resetGame,
     
-    // 协作功能
-    sessionId: currentSessionId,
-    setSessionId: setCurrentSessionId,
+    // 协作功能 - 只暴露协作会话ID
+    sessionId: collaborativeSessionId,
+    setSessionId,
     
     // 直接访问事件操作
     sendEvent: eventDrivenGame.sendEvent
