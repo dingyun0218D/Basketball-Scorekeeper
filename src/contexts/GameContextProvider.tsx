@@ -1,7 +1,7 @@
 import React, { useReducer, useEffect, ReactNode } from 'react';
 import { GameContext } from './GameContext';
 import { gameReducer, initialGameState } from './GameContext';
-import { saveCurrentGame, loadCurrentGame } from '../utils/storage';
+import { saveCurrentGame } from '../utils/storage';
 
 // Provider
 interface GameProviderProps {

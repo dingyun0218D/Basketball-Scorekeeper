@@ -1,5 +1,152 @@
 import { useEventDrivenGameContext } from './useEventDrivenGameContext';
-import { GameState, Player, Team, ScoreType } from '../types';
+import { GameState, ScoreType, Player, Team } from '../types';
+
+// 定义具体的action类型
+interface LoadArchiveAction {
+  type: 'LOAD_ARCHIVE';
+  payload: GameState;
+}
+
+interface LoadGameAction {
+  type: 'LOAD_GAME';
+  payload: GameState;
+}
+
+interface SyncCollaborativeStateAction {
+  type: 'SYNC_COLLABORATIVE_STATE';
+  payload: GameState;
+}
+
+interface UpdateScoreAction {
+  type: 'UPDATE_SCORE';
+  payload: {
+    teamId: string;
+    points: number;
+    playerId: string;
+    scoreType: ScoreType;
+  };
+}
+
+interface AddFoulAction {
+  type: 'ADD_FOUL';
+  payload: {
+    teamId: string;
+    playerId: string;
+  };
+}
+
+interface AddPlayerAction {
+  type: 'ADD_PLAYER';
+  payload: {
+    teamId: string;
+    player: Player;
+  };
+}
+
+interface RemovePlayerAction {
+  type: 'REMOVE_PLAYER';
+  payload: {
+    teamId: string;
+    playerId: string;
+  };
+}
+
+interface UpdateTeamAction {
+  type: 'UPDATE_TEAM';
+  payload: {
+    teamId: string;
+    updates: Partial<Team>;
+  };
+}
+
+interface TimerAction {
+  type: 'START_TIMER' | 'PAUSE_TIMER' | 'RESUME_TIMER' | 'STOP_TIMER' | 'NEXT_QUARTER' | 'RESET_GAME';
+}
+
+interface UpdateTimeAction {
+  type: 'UPDATE_TIME' | 'SET_QUARTER_TIME';
+  payload: {
+    time: string;
+  };
+}
+
+interface UpdateTimerTimeAction {
+  type: 'UPDATE_TIMER_TIME';
+  payload: {
+    time: string;
+  };
+}
+
+interface TogglePlayerCourtStatusAction {
+  type: 'TOGGLE_PLAYER_COURT_STATUS';
+  payload: {
+    teamId: string;
+    playerId: string;
+  };
+}
+
+interface UpdatePlayerStatAction {
+  type: 'UPDATE_PLAYER_STAT';
+  payload: {
+    teamId: string;
+    playerId: string;
+    stat: string;
+    value: number;
+  };
+}
+
+interface UndoScoreAction {
+  type: 'UNDO_SCORE';
+  payload: {
+    teamId: string;
+    playerId: string;
+    scoreType: ScoreType;
+  };
+}
+
+interface AddShotAttemptAction {
+  type: 'ADD_SHOT_ATTEMPT';
+  payload: {
+    teamId: string;
+    playerId: string;
+    shotType: 'field' | 'three' | 'free';
+  };
+}
+
+interface UseTimeoutAction {
+  type: 'USE_TIMEOUT';
+  payload: {
+    teamId: string;
+  };
+}
+
+interface SyncPlayerInfoAction {
+  type: 'SYNC_PLAYER_INFO';
+  payload: {
+    originalPlayer: Player;
+    updatedPlayer: Player;
+  };
+}
+
+// 联合类型
+type DispatchAction = 
+  | LoadArchiveAction
+  | LoadGameAction
+  | SyncCollaborativeStateAction
+  | UpdateScoreAction
+  | AddFoulAction
+  | AddPlayerAction
+  | RemovePlayerAction
+  | UpdateTeamAction
+  | TimerAction
+  | UpdateTimeAction
+  | UpdateTimerTimeAction
+  | TogglePlayerCourtStatusAction
+  | UpdatePlayerStatAction
+  | UndoScoreAction
+  | AddShotAttemptAction
+  | UseTimeoutAction
+  | SyncPlayerInfoAction;
 
 export const useGame = () => {
   const context = useEventDrivenGameContext();
@@ -25,7 +172,7 @@ export const useGame = () => {
   };
 
   // 为了向后兼容，我们保留dispatch方法，但引导用户使用新的方法
-  const dispatch = async (action: any) => {
+  const dispatch = async (action: DispatchAction) => {
     console.warn('dispatch方法已弃用，请使用具体的事件方法');
     
     // 尝试将旧的action转换为新的方法调用
@@ -44,7 +191,7 @@ export const useGame = () => {
           action.payload.teamId, 
           action.payload.points, 
           action.payload.playerId, 
-          action.payload.scoreType as ScoreType
+          action.payload.scoreType
         );
         break;
       case 'ADD_FOUL':
@@ -80,6 +227,9 @@ export const useGame = () => {
       case 'UPDATE_TIME':
         await context.updateTime(action.payload.time);
         break;
+      case 'UPDATE_TIMER_TIME':
+        await context.updateTime(action.payload.time);
+        break;
       case 'SET_QUARTER_TIME':
         await context.setQuarterTime(action.payload.time);
         break;
@@ -102,7 +252,7 @@ export const useGame = () => {
         await context.syncPlayerInfo(action.payload.originalPlayer, action.payload.updatedPlayer);
         break;
       default:
-        console.warn('不支持的action类型:', action.type);
+        console.warn('不支持的action类型:', (action as { type: string }).type);
     }
   };
   
