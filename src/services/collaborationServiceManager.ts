@@ -25,7 +25,7 @@ export class CollaborationServiceManager {
     leancloud: leancloudService
   };
 
-  private currentServiceType: ServiceType = 'firebase';
+  private currentServiceType: ServiceType = 'leancloud';
 
   // 获取当前服务
   getCurrentService(): CollaborativeService {

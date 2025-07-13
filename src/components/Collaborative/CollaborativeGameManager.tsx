@@ -30,7 +30,7 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showServiceSwitchConfirm, setShowServiceSwitchConfirm] = useState(false);
   const [pendingServiceType, setPendingServiceType] = useState<ServiceType | null>(null);
-  const [selectedServiceType, setSelectedServiceType] = useState<ServiceType>('firebase');
+  const [selectedServiceType, setSelectedServiceType] = useState<ServiceType>('leancloud');
   const lastSyncTime = useRef<number>(0);
   
   const gameContext = useContext(GameContext);

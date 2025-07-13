@@ -30,7 +30,7 @@ export const useCollaborativeGame = ({
   sessionId: initialSessionId,
   user,
   initialGameState: _initialGameState,
-  serviceType: initialServiceType = 'firebase'
+  serviceType: initialServiceType = 'leancloud'
 }: UseCollaborativeGameProps): UseCollaborativeGameReturn => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [events, setEvents] = useState<GameEvent[]>([]);
