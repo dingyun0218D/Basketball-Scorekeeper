@@ -5,7 +5,7 @@ import { useAppState } from './hooks/useAppState';
 import { useSavedPlayers } from './hooks/useSavedPlayers';
 import { useGameEvents } from './hooks/useGameEvents';
 import { usePlayerSync } from './hooks/usePlayerSync';
-import { useEventDrivenCollaboration } from './hooks/useEventDrivenCollaboration';
+import { useCollaboration } from './hooks/useCollaboration';
 import { AppHeader, TabNavigation, AppContent, AppModals } from './components/layout';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import './index.css';
@@ -14,10 +14,10 @@ const App: React.FC = () => {
   const { gameState } = useGame();
   useGameTimer(); // 启用计时器功能
   
-  // 使用各种hooks（必须在条件返回之前调用）
+  // 使用各种hooks
   const appState = useAppState();
   const savedPlayersState = useSavedPlayers();
-  const collaboration = useEventDrivenCollaboration();
+  const collaboration = useCollaboration();
   
   // 游戏事件处理
   const gameEvents = useGameEvents({
@@ -33,25 +33,13 @@ const App: React.FC = () => {
     setPlayerSyncInfo: appState.setPlayerSyncInfo,
     setShowPlayerSyncModal: appState.setShowPlayerSyncModal
   });
-  
-  // 如果游戏状态还没有加载，显示加载界面
-  if (!gameState) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">正在加载游戏状态...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <ErrorBoundary>
     <div className="min-h-screen bg-gray-100">
         {/* 应用头部 */}
         <AppHeader
-          collaborativeSessionId={collaboration.collaborativeSessionId || null}
+          collaborativeSessionId={collaboration.collaborativeSessionId}
           homeTeamScore={gameState.homeTeam.score}
           awayTeamScore={gameState.awayTeam.score}
           onToggleCollaborativePanel={collaboration.toggleCollaborativePanel}
@@ -73,7 +61,7 @@ const App: React.FC = () => {
           setShowAddPlayerModal={appState.setShowAddPlayerModal}
           showCollaborativePanel={collaboration.showCollaborativePanel}
           user={collaboration.user}
-          collaborativeSessionId={collaboration.collaborativeSessionId || null}
+          collaborativeSessionId={collaboration.collaborativeSessionId}
           onSessionChange={collaboration.handleSessionChange}
           onScoreUpdate={gameEvents.handleScoreUpdate}
           onPlayerStatUpdate={gameEvents.handlePlayerStatUpdate}
@@ -90,9 +78,9 @@ const App: React.FC = () => {
           onResumeTimer={gameEvents.handleResumeTimer}
           onStopTimer={gameEvents.handleStopTimer}
           onNextQuarter={gameEvents.handleNextQuarter}
+          onResetGame={gameEvents.handleResetGame}
           onTimeChange={gameEvents.handleTimeChange}
           onQuarterTimeChange={gameEvents.handleQuarterTimeChange}
-          onResetGame={gameEvents.handleResetGame}
           onTeamNameUpdate={gameEvents.handleTeamNameUpdate}
         />
 

@@ -7,7 +7,7 @@ export const useGameTimer = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (gameState && gameState.isRunning && !gameState.isPaused) {
+    if (gameState.isRunning && !gameState.isPaused) {
       intervalRef.current = setInterval(() => {
         const currentSeconds = parseTime(gameState.time);
         
@@ -37,7 +37,7 @@ export const useGameTimer = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [gameState, gameState?.isRunning, gameState?.isPaused, gameState?.time, gameState?.quarter, dispatch]);
+  }, [gameState.isRunning, gameState.isPaused, gameState.time, gameState.quarter, dispatch]);
 
   const startTimer = () => {
     dispatch({ type: 'START_TIMER' });
@@ -64,10 +64,10 @@ export const useGameTimer = () => {
   };
 
   return {
-    time: gameState?.time || '15:00',
-    quarter: gameState?.quarter || 1,
-    isRunning: gameState?.isRunning || false,
-    isPaused: gameState?.isPaused || false,
+    time: gameState.time,
+    quarter: gameState.quarter,
+    isRunning: gameState.isRunning,
+    isPaused: gameState.isPaused,
     startTimer,
     pauseTimer,
     resumeTimer,

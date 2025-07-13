@@ -33,8 +33,6 @@ export const usePlayerSync = ({
         originalPlayer.position !== player.position;
       
       if (hasBasicInfoChange) {
-        if (!gameState) return;
-        
         // 检查是否会产生号码冲突
         const teams = [gameState.homeTeam, gameState.awayTeam];
         const syncResult = batchSyncPlayerInfo(teams, originalPlayer, player);

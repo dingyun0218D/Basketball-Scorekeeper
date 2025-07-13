@@ -1,7 +1,7 @@
 import React, { useReducer, useEffect, ReactNode } from 'react';
 import { GameContext } from './GameContext';
 import { gameReducer, initialGameState } from './GameContext';
-import { saveCurrentGame } from '../utils/storage';
+import { saveCurrentGame, loadCurrentGame } from '../utils/storage';
 
 // Provider
 interface GameProviderProps {
@@ -11,11 +11,16 @@ interface GameProviderProps {
 export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [gameState, dispatch] = useReducer(gameReducer, initialGameState);
 
-  // 在事件驱动架构中，游戏状态的加载由EventDrivenGameProvider处理
-  // 这里只保留基本的GameContext功能，主要用于向后兼容
+  // 加载保存的游戏状态
   useEffect(() => {
-    console.log('GameProvider: 初始化传统游戏上下文（仅用于向后兼容）');
-    // 不再自动加载游戏状态，因为这会与事件驱动架构冲突
+    console.log('GameProvider: 尝试加载保存的游戏状态');
+    const savedGame = loadCurrentGame();
+    if (savedGame) {
+      console.log('GameProvider: 加载已保存的游戏状态', savedGame);
+      dispatch({ type: 'LOAD_GAME', payload: savedGame });
+    } else {
+      console.log('GameProvider: 没有找到保存的游戏状态，使用初始状态');
+    }
   }, []);
 
   // 调试输出当前状态

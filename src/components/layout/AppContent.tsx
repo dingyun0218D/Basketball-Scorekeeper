@@ -6,7 +6,7 @@ import { TimerControls } from '../GameControls';
 import { StatisticsAnalysis } from '../Statistics';
 import { GameHistory } from '../History/GameHistory';
 import { TeamNameEditor } from '../Team/TeamNameEditor';
-import EventDrivenCollaborativeGameManager from '../Collaborative/EventDrivenCollaborativeGameManager';
+import CollaborativeGameManager from '../Collaborative/CollaborativeGameManager';
 
 interface AppContentProps {
   activeTab: TabType;
@@ -194,9 +194,9 @@ export const AppContent: React.FC<AppContentProps> = ({
       {/* 协作面板 - 在所有页面顶部显示 */}
       {showCollaborativePanel && (
         <div className="bg-white rounded-lg shadow-sm border mb-4">
-          <EventDrivenCollaborativeGameManager
+          <CollaborativeGameManager
             user={user}
-            _initialGameState={gameState}
+            initialGameState={gameState}
             onSessionChange={onSessionChange}
           />
         </div>

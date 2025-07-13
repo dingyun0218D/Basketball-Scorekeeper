@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useCollaborativeGame } from '../../hooks/useCollaborativeGame';
 import { GameState, User, ServiceType } from '../../types';
 import { GameContext } from '../../contexts/GameContext';
-import { useGame } from '../../hooks/useGame';
 import { ConfirmModal } from '../common/ConfirmModal';
 import ServiceSelector from './ServiceSelector';
 import { 
@@ -38,8 +37,7 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
   if (!gameContext) {
     throw new Error('CollaborativeGameManager 必须在 GameProvider 内使用');
   }
-  const { gameState: localGameState } = gameContext;
-  const { syncCollaborativeState } = useGame();
+  const { gameState: localGameState, dispatch } = gameContext;
   
   // 使用智能防抖处理，过滤纯计时器更新
   const debouncedLocalGameState = useCollaborativeDebounce(localGameState, 500, isTimerOnlyUpdate);
@@ -80,25 +78,25 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
     }
   };
 
-  // 确认服务切换
+  // 确认切换服务
   const confirmServiceSwitch = () => {
     if (pendingServiceType) {
-      setSelectedServiceType(pendingServiceType);
       switchService(pendingServiceType);
+      setSelectedServiceType(pendingServiceType);
       setPendingServiceType(null);
     }
     setShowServiceSwitchConfirm(false);
   };
 
-  // 取消服务切换
+  // 取消切换服务
   const cancelServiceSwitch = () => {
     setPendingServiceType(null);
     setShowServiceSwitchConfirm(false);
   };
 
-  // 同步远程状态到本地（当远程状态更新时）
+  // 同步协作状态到本地状态
   useEffect(() => {
-    if (isConnected && collaborativeGameState && localGameState) {
+    if (collaborativeGameState && isConnected && localGameState) {
       const collaborativeTime = normalizeTimestamp(collaborativeGameState.updatedAt);
       
       // 使用改进的时间戳比较逻辑
@@ -109,12 +107,12 @@ const CollaborativeGameManager: React.FC<CollaborativeGameManagerProps> = ({
         
         lastSyncTime.current = collaborativeTime;
         const mergedState = mergeGameStates(localGameState, collaborativeGameState);
-        syncCollaborativeState(mergedState);
+        dispatch({ type: 'SYNC_COLLABORATIVE_STATE', payload: mergedState });
       } else {
         logSyncOperation('skip', localGameState.updatedAt, collaborativeGameState.updatedAt, '无需同步远程状态');
       }
     }
-  }, [collaborativeGameState, isConnected, syncCollaborativeState, localGameState]);
+  }, [collaborativeGameState, isConnected, dispatch, localGameState]);
 
   // 同步本地状态到协作状态（使用智能防抖后的状态）
   useEffect(() => {
