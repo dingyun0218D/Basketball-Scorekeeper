@@ -17,8 +17,8 @@
 - **历史记录** - 保存和查看历史比赛数据
 
 ### 🤝 协作功能
-- **多服务支持** - 支持Firebase和LeanCloud两种协作服务
-- **实时同步** - 多设备间实时同步比赛数据
+- **多服务支持** - 支持Firebase、LeanCloud和阿里云TableStore三种协作服务
+- **实时同步** - 多设备间实时同步比赛数据（Tunnel Service推送）
 - **会话管理** - 创建或加入协作会话，支持多人同时计分
 - **在线状态** - 显示当前在线用户和连接状态
 
@@ -31,12 +31,14 @@
 ## 🛠️ 技术栈
 
 ```
-React 18 + TypeScript    # 前端框架与类型安全
-Vite                     # 构建工具
-Tailwind CSS             # 样式框架
-Firebase/LeanCloud       # 实时协作后端
-React Context            # 状态管理
-Lucide React             # 图标库
+React 18 + TypeScript              # 前端框架与类型安全
+Vite                               # 构建工具
+Tailwind CSS                       # 样式框架
+Firebase/LeanCloud/TableStore      # 实时协作后端
+Node.js + Express                  # 后端服务（TableStore）
+WebSocket + Tunnel Service         # 实时推送
+React Context                      # 状态管理
+Lucide React                       # 图标库
 ```
 
 ## 🚀 快速开始
@@ -129,9 +131,19 @@ AV.init({
 
 项目文档位于 `docs/` 目录：
 
+### 协作服务配置
 - **FIREBASE_SETUP_GUIDE.md** - Firebase配置指南
 - **LEANCLOUD_COLLABORATION_IMPLEMENTATION.md** - LeanCloud协作实现
+- **TABLESTORE_DEPLOYMENT_GUIDE.md** - 阿里云TableStore完整部署指南
+- **TABLESTORE_QUICK_START.md** - TableStore快速开始
 - **COLLABORATION_TEST_GUIDE.md** - 协作功能测试指南
+
+### 后端服务
+- **SERVER_README.md** - 后端服务文档和API说明
+- **SERVER_ENV_TEMPLATE.md** - 环境变量配置模板
+
+### 项目说明
+- **TABLESTORE_IMPLEMENTATION_SUMMARY.md** - TableStore实现总结
 - **PROJECT_SUMMARY.md** - 详细的项目功能说明
 - 其他技术文档和实现细节
 

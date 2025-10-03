@@ -1,0 +1,87 @@
+name: Deploy Backend to ECS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'server/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Build server
+        working-directory: ./server
+        run: npm run build
+
+      - name: Deploy to ECS
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USERNAME }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          source: "server/dist,server/package.json,server/package-lock.json,server/ecosystem.config.js"
+          target: "/opt/basketball-scorekeeper"
+          strip_components: 1
+
+      - name: Install dependencies and restart on ECS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USERNAME }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script: |
+            cd /opt/basketball-scorekeeper
+            
+            # 创建.env文件
+            cat > .env << EOF
+            TABLESTORE_INSTANCE_NAME=${{ secrets.TABLESTORE_INSTANCE_NAME }}
+            TABLESTORE_ENDPOINT=${{ secrets.TABLESTORE_ENDPOINT }}
+            TABLESTORE_ACCESS_KEY_ID=${{ secrets.TABLESTORE_ACCESS_KEY_ID }}
+            TABLESTORE_ACCESS_KEY_SECRET=${{ secrets.TABLESTORE_ACCESS_KEY_SECRET }}
+            TABLESTORE_REGION=${{ secrets.TABLESTORE_REGION }}
+            TUNNEL_GAME_SESSIONS_ID=${{ secrets.TUNNEL_GAME_SESSIONS_ID }}
+            TUNNEL_GAME_EVENTS_ID=${{ secrets.TUNNEL_GAME_EVENTS_ID }}
+            TABLE_GAME_SESSIONS=GameSessions
+            TABLE_GAME_EVENTS=GameEvents
+            PORT=3001
+            NODE_ENV=production
+            ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+            EOF
+            
+            # 安装生产依赖
+            npm ci --production
+            
+            # 创建logs目录
+            mkdir -p logs
+            
+            # 使用PM2重启服务
+            npm install -g pm2
+            pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
+            pm2 save
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Backend deployment successful!"
+          else
+            echo "❌ Backend deployment failed!"
+          fi
+

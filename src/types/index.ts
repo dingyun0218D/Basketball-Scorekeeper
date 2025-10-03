@@ -144,7 +144,7 @@ export interface User {
 }
 
 // 协作服务类型
-export type ServiceType = 'firebase' | 'leancloud';
+export type ServiceType = 'firebase' | 'leancloud' | 'tablestore';
 
 // 协作服务接口
 export interface CollaborativeService {

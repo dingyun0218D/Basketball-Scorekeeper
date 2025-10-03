@@ -1,6 +1,7 @@
 import { CollaborativeService, ServiceType, ServiceConfig } from '../types';
 import { firestoreService } from './firestoreService';
 import { leancloudService } from './leancloudService';
+import { tablestoreService } from './tablestoreService';
 
 // 服务配置
 export const SERVICE_CONFIGS: Record<ServiceType, ServiceConfig> = {
@@ -15,6 +16,12 @@ export const SERVICE_CONFIGS: Record<ServiceType, ServiceConfig> = {
     name: 'LeanCloud',
     description: '国内云端服务，稳定可靠',
     icon: '☁️'
+  },
+  tablestore: {
+    type: 'tablestore',
+    name: '阿里云TableStore',
+    description: '阿里云表格存储，高性能实时协同',
+    icon: '⚡'
   }
 };
 
@@ -22,10 +29,11 @@ export const SERVICE_CONFIGS: Record<ServiceType, ServiceConfig> = {
 export class CollaborationServiceManager {
   private services: Record<ServiceType, CollaborativeService> = {
     firebase: firestoreService,
-    leancloud: leancloudService
+    leancloud: leancloudService,
+    tablestore: tablestoreService
   };
 
-  private currentServiceType: ServiceType = 'leancloud';
+  private currentServiceType: ServiceType = 'tablestore';
 
   // 获取当前服务
   getCurrentService(): CollaborativeService {
