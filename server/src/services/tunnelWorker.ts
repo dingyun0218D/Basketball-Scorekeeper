@@ -9,13 +9,18 @@ export type GameStateChangeCallback = (sessionId: string, gameState: GameState) 
 export type GameEventChangeCallback = (sessionId: string, event: GameEvent) => void;
 
 /**
+ * Tunnel处理器完成回调类型
+ */
+type ProcessorDoneCallback = (error?: Error) => void;
+
+/**
  * Tunnel Worker服务
  * 监听TableStore数据变更并触发回调
  */
 export class TunnelWorker {
   private tunnelClient: TableStore.TunnelClient;
-  private gameSessionsTunnel?: any;
-  private gameEventsTunnel?: any;
+  private gameSessionsTunnel?: { shutdown: () => Promise<void> };
+  private gameEventsTunnel?: { shutdown: () => Promise<void> };
   private gameStateCallbacks: Set<GameStateChangeCallback> = new Set();
   private gameEventCallbacks: Set<GameEventChangeCallback> = new Set();
   private isRunning: boolean = false;
@@ -132,7 +137,7 @@ export class TunnelWorker {
    */
   private createGameSessionsProcessor() {
     return {
-      process: (records: any[], done: Function) => {
+      process: (records: unknown[], done: ProcessorDoneCallback) => {
         try {
           for (const record of records) {
             this.handleGameSessionRecord(record);
@@ -154,7 +159,7 @@ export class TunnelWorker {
    */
   private createGameEventsProcessor() {
     return {
-      process: (records: any[], done: Function) => {
+      process: (records: unknown[], done: ProcessorDoneCallback) => {
         try {
           for (const record of records) {
             this.handleGameEventRecord(record);
@@ -174,7 +179,7 @@ export class TunnelWorker {
   /**
    * 处理GameSession记录变更
    */
-  private handleGameSessionRecord(record: any): void {
+  private handleGameSessionRecord(record: Record<string, unknown>): void {
     try {
       const actionType = record.type;
       
@@ -184,18 +189,18 @@ export class TunnelWorker {
       }
 
       // 提取sessionId
-      const primaryKey = record.primaryKey || [];
-      const sessionIdObj = primaryKey.find((pk: any) => pk.sessionId !== undefined);
-      if (!sessionIdObj) {
+      const primaryKey = (record.primaryKey as Record<string, unknown>[]) || [];
+      const sessionIdObj = primaryKey.find((pk) => 'sessionId' in pk);
+      if (!sessionIdObj || !sessionIdObj.sessionId) {
         return;
       }
-      const sessionId = sessionIdObj.sessionId;
+      const sessionId = sessionIdObj.sessionId as string;
 
       // 提取gameState
-      const columns = record.columns || [];
-      const gameStateCol = columns.find((col: any) => col.columnName === 'gameState');
-      const activeUsersCol = columns.find((col: any) => col.columnName === 'activeUsers');
-      const updatedAtCol = columns.find((col: any) => col.columnName === 'updatedAt');
+      const columns = (record.columns as Array<{ columnName: string; columnValue: string }>) || [];
+      const gameStateCol = columns.find((col) => col.columnName === 'gameState');
+      const activeUsersCol = columns.find((col) => col.columnName === 'activeUsers');
+      const updatedAtCol = columns.find((col) => col.columnName === 'updatedAt');
 
       if (!gameStateCol) {
         return;
@@ -230,7 +235,7 @@ export class TunnelWorker {
   /**
    * 处理GameEvent记录变更
    */
-  private handleGameEventRecord(record: any): void {
+  private handleGameEventRecord(record: Record<string, unknown>): void {
     try {
       const actionType = record.type;
       
@@ -240,16 +245,16 @@ export class TunnelWorker {
       }
 
       // 提取sessionId
-      const primaryKey = record.primaryKey || [];
-      const sessionIdObj = primaryKey.find((pk: any) => pk.sessionId !== undefined);
-      if (!sessionIdObj) {
+      const primaryKey = (record.primaryKey as Record<string, unknown>[]) || [];
+      const sessionIdObj = primaryKey.find((pk) => 'sessionId' in pk);
+      if (!sessionIdObj || !sessionIdObj.sessionId) {
         return;
       }
-      const sessionId = sessionIdObj.sessionId;
+      const sessionId = sessionIdObj.sessionId as string;
 
       // 提取事件数据
-      const columns = record.columns || [];
-      const eventDataCol = columns.find((col: any) => col.columnName === 'eventData');
+      const columns = (record.columns as Array<{ columnName: string; columnValue: string }>) || [];
+      const eventDataCol = columns.find((col) => col.columnName === 'eventData');
       
       if (!eventDataCol) {
         return;

@@ -254,15 +254,15 @@ export class TableStoreClient {
   /**
    * 解析TableStore返回的属性列
    */
-  private parseAttributes(row: any): Record<string, any> {
-    const attributes: Record<string, any> = {};
+  private parseAttributes(row: unknown[]): Record<string, unknown> {
+    const attributes: Record<string, unknown> = {};
     
     if (row && row.length > 0) {
       // 跳过主键部分，从属性列开始解析
       for (const item of row) {
-        if (item && typeof item === 'object') {
-          const key = Object.keys(item)[0];
-          attributes[key] = item[key];
+        if (item && typeof item === 'object' && !Array.isArray(item)) {
+          const key = Object.keys(item as Record<string, unknown>)[0];
+          attributes[key] = (item as Record<string, unknown>)[key];
         }
       }
     }

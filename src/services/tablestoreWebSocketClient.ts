@@ -21,7 +21,7 @@ export enum WSMessageType {
 
 export interface WSMessage {
   type: WSMessageType;
-  payload?: any;
+  payload?: unknown;
   error?: string;
 }
 
@@ -33,7 +33,7 @@ export class TableStoreWebSocketClient {
   private ws: WebSocket | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private pingTimer: NodeJS.Timeout | null = null;
-  private messageHandlers: Map<WSMessageType, Set<(payload: any) => void>> = new Map();
+  private messageHandlers: Map<WSMessageType, Set<(payload: unknown) => void>> = new Map();
   private isConnecting: boolean = false;
   private shouldReconnect: boolean = true;
   private readonly RECONNECT_INTERVAL = 3000;
@@ -125,7 +125,7 @@ export class TableStoreWebSocketClient {
   /**
    * 订阅消息类型
    */
-  on(type: WSMessageType, handler: (payload: any) => void): () => void {
+  on(type: WSMessageType, handler: (payload: unknown) => void): () => void {
     if (!this.messageHandlers.has(type)) {
       this.messageHandlers.set(type, new Set());
     }

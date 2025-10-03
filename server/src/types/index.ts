@@ -93,7 +93,7 @@ export enum WSMessageType {
 
 export interface WSMessage {
   type: WSMessageType;
-  payload?: any;
+  payload?: unknown;
   error?: string;
 }
 
@@ -109,6 +109,6 @@ export enum TunnelRecordType {
 export interface TunnelRecord {
   type: TunnelRecordType;
   sessionId: string;
-  data?: any;
+  data?: unknown;
 }
 

@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import { tablestoreClient } from '../services/tablestoreClient';
-import { GameState, GameEvent } from '../types';
 
 const router = Router();
 
@@ -36,11 +35,11 @@ router.post('/sessions', async (req: Request, res: Response) => {
       sessionId,
       message: 'Game session created successfully'
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating game session:', error);
     res.status(500).json({
       error: 'Failed to create game session',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -64,11 +63,11 @@ router.get('/sessions/:sessionId', async (req: Request, res: Response) => {
       success: true,
       gameState
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error getting game session:', error);
     res.status(500).json({
       error: 'Failed to get game session',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -94,11 +93,11 @@ router.put('/sessions/:sessionId', async (req: Request, res: Response) => {
       success: true,
       message: 'Game state updated successfully'
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating game state:', error);
     res.status(500).json({
       error: 'Failed to update game state',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -116,11 +115,11 @@ router.delete('/sessions/:sessionId', async (req: Request, res: Response) => {
       success: true,
       message: 'Game session deleted successfully'
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting game session:', error);
     res.status(500).json({
       error: 'Failed to delete game session',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -138,11 +137,11 @@ router.get('/sessions/:sessionId/exists', async (req: Request, res: Response) =>
       success: true,
       exists
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error checking session:', error);
     res.status(500).json({
       error: 'Failed to check session',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -168,11 +167,11 @@ router.post('/sessions/:sessionId/events', async (req: Request, res: Response) =
       success: true,
       message: 'Game event added successfully'
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error adding game event:', error);
     res.status(500).json({
       error: 'Failed to add game event',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -193,11 +192,11 @@ router.get('/sessions/:sessionId/events', async (req: Request, res: Response) =>
       events,
       count: events.length
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error getting game events:', error);
     res.status(500).json({
       error: 'Failed to get game events',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
@@ -223,11 +222,11 @@ router.post('/sessions/:sessionId/activity', async (req: Request, res: Response)
       success: true,
       message: 'User activity updated successfully'
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating user activity:', error);
     res.status(500).json({
       error: 'Failed to update user activity',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

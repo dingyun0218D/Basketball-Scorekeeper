@@ -27,7 +27,7 @@ export class WebSocketService {
   /**
    * 初始化WebSocket服务器
    */
-  initialize(server: any): void {
+  initialize(server: unknown): void {
     this.wss = new WebSocketServer({ server });
 
     this.wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
@@ -46,7 +46,7 @@ export class WebSocketService {
   /**
    * 处理新的客户端连接
    */
-  private handleConnection(ws: WebSocket, request: IncomingMessage): void {
+  private handleConnection(ws: WebSocket, _request: IncomingMessage): void {
     const clientId = this.generateClientId();
     const clientInfo: ClientConnection = {
       ws,
