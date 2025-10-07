@@ -28,7 +28,7 @@ export class WebSocketService {
    * 初始化WebSocket服务器
    */
   initialize(server: unknown): void {
-    this.wss = new WebSocketServer({ server });
+    this.wss = new WebSocketServer({ server: server as any });
 
     this.wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
       this.handleConnection(ws, request);
@@ -95,19 +95,19 @@ export class WebSocketService {
 
       switch (message.type) {
         case WSMessageType.SUBSCRIBE_SESSION:
-          this.handleSubscribeSession(clientInfo, message.payload?.sessionId);
+          this.handleSubscribeSession(clientInfo, (message.payload as any)?.sessionId);
           break;
 
         case WSMessageType.UNSUBSCRIBE_SESSION:
-          this.handleUnsubscribeSession(clientInfo, message.payload?.sessionId);
+          this.handleUnsubscribeSession(clientInfo, (message.payload as any)?.sessionId);
           break;
 
         case WSMessageType.SUBSCRIBE_EVENTS:
-          this.handleSubscribeEvents(clientInfo, message.payload?.sessionId);
+          this.handleSubscribeEvents(clientInfo, (message.payload as any)?.sessionId);
           break;
 
         case WSMessageType.UNSUBSCRIBE_EVENTS:
-          this.handleUnsubscribeEvents(clientInfo, message.payload?.sessionId);
+          this.handleUnsubscribeEvents(clientInfo, (message.payload as any)?.sessionId);
           break;
 
         case WSMessageType.PING:

@@ -98,8 +98,8 @@ export class TableStoreClient {
       }
 
       const attributes = this.parseAttributes(result.row);
-      const gameState = JSON.parse(attributes.gameState || '{}');
-      const activeUsers = JSON.parse(attributes.activeUsers || '{}');
+      const gameState = JSON.parse((attributes.gameState as string) || '{}');
+      const activeUsers = JSON.parse((attributes.activeUsers as string) || '{}');
 
       return {
         ...gameState,
@@ -169,7 +169,7 @@ export class TableStoreClient {
       if (result.rows) {
         for (const row of result.rows) {
           const attributes = this.parseAttributes(row);
-          const eventData = JSON.parse(attributes.eventData || '{}');
+          const eventData = JSON.parse((attributes.eventData as string) || '{}');
           
           events.push({
             ...eventData,

@@ -140,12 +140,12 @@ export class TunnelWorker {
       process: (records: unknown[], done: ProcessorDoneCallback) => {
         try {
           for (const record of records) {
-            this.handleGameSessionRecord(record);
+            this.handleGameSessionRecord(record as Record<string, unknown>);
           }
           done();
         } catch (error) {
           console.error('❌ Error processing GameSessions records:', error);
-          done(error);
+          done(error instanceof Error ? error : new Error(String(error)));
         }
       },
       shutdown: () => {
@@ -162,12 +162,12 @@ export class TunnelWorker {
       process: (records: unknown[], done: ProcessorDoneCallback) => {
         try {
           for (const record of records) {
-            this.handleGameEventRecord(record);
+            this.handleGameEventRecord(record as Record<string, unknown>);
           }
           done();
         } catch (error) {
           console.error('❌ Error processing GameEvents records:', error);
-          done(error);
+          done(error instanceof Error ? error : new Error(String(error)));
         }
       },
       shutdown: () => {
