@@ -46,6 +46,23 @@ jobs:
           username: ${{ secrets.ECS_USERNAME }}
           key: ${{ secrets.ECS_SSH_KEY }}
           script: |
+            # 检查并安装Node.js环境
+            if ! command -v node &> /dev/null; then
+              echo "📦 安装Node.js..."
+              curl -fsSL https://rpm.nodesource.com/setup_18.x | bash -
+              yum install -y nodejs
+            else
+              echo "✅ Node.js已安装: $(node -v)"
+            fi
+            
+            # 检查并安装PM2
+            if ! command -v pm2 &> /dev/null; then
+              echo "📦 安装PM2..."
+              npm install -g pm2
+            else
+              echo "✅ PM2已安装: $(pm2 -v)"
+            fi
+            
             cd /opt/basketball-scorekeeper
             
             # 创建.env文件
@@ -71,7 +88,6 @@ jobs:
             mkdir -p logs
             
             # 使用PM2重启服务
-            npm install -g pm2
             pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
             pm2 save
 
