@@ -30,13 +30,11 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        
-    - name: 删除 package-lock.json 避免版本冲突
-      run: rm -f package-lock.json
+        cache: 'npm'
         
     - name: 安装依赖
       run: |
-        npm install
+        npm ci
         npm install @rollup/rollup-linux-x64-gnu --save-optional || true
       
     - name: 运行代码检查
