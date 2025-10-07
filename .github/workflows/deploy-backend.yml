@@ -11,23 +11,25 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: 检出代码
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'server/package-lock.json'
 
-      - name: Install dependencies
+      - name: 安装依赖
         working-directory: ./server
         run: npm ci
 
-      - name: Build server
+      - name: 构建服务器
         working-directory: ./server
         run: npm run build
 
-      - name: Deploy to ECS
+      - name: 部署到 ECS
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.ECS_HOST }}
@@ -37,7 +39,7 @@ jobs:
           target: "/opt/basketball-scorekeeper"
           strip_components: 1
 
-      - name: Install dependencies and restart on ECS
+      - name: 在 ECS 上安装依赖并重启服务
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.ECS_HOST }}
@@ -73,12 +75,12 @@ jobs:
             pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
             pm2 save
 
-      - name: Notify deployment status
+      - name: 通知部署状态
         if: always()
         run: |
           if [ ${{ job.status }} == 'success' ]; then
-            echo "✅ Backend deployment successful!"
+            echo "✅ 后端部署成功！"
           else
-            echo "❌ Backend deployment failed!"
+            echo "❌ 后端部署失败！"
           fi
 
