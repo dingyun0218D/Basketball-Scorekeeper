@@ -1,5 +1,6 @@
 import { WebSocket, WebSocketServer } from 'ws';
-import { IncomingMessage } from 'http';
+import { IncomingMessage, Server as HTTPServer } from 'http';
+import { Server as HTTPSServer } from 'https';
 import { WSMessage, WSMessageType, GameState, GameEvent } from '../types';
 import { tunnelWorker } from './tunnelWorker';
 
@@ -27,8 +28,8 @@ export class WebSocketService {
   /**
    * 初始化WebSocket服务器
    */
-  initialize(server: unknown): void {
-    this.wss = new WebSocketServer({ server: server as any });
+  initialize(server: HTTPServer | HTTPSServer): void {
+    this.wss = new WebSocketServer({ server });
 
     this.wss.on('connection', (ws: WebSocket, request: IncomingMessage) => {
       this.handleConnection(ws, request);
@@ -95,19 +96,27 @@ export class WebSocketService {
 
       switch (message.type) {
         case WSMessageType.SUBSCRIBE_SESSION:
-          this.handleSubscribeSession(clientInfo, (message.payload as any)?.sessionId);
+          if (message.payload && typeof message.payload === 'object' && 'sessionId' in message.payload) {
+            this.handleSubscribeSession(clientInfo, message.payload.sessionId as string);
+          }
           break;
 
         case WSMessageType.UNSUBSCRIBE_SESSION:
-          this.handleUnsubscribeSession(clientInfo, (message.payload as any)?.sessionId);
+          if (message.payload && typeof message.payload === 'object' && 'sessionId' in message.payload) {
+            this.handleUnsubscribeSession(clientInfo, message.payload.sessionId as string);
+          }
           break;
 
         case WSMessageType.SUBSCRIBE_EVENTS:
-          this.handleSubscribeEvents(clientInfo, (message.payload as any)?.sessionId);
+          if (message.payload && typeof message.payload === 'object' && 'sessionId' in message.payload) {
+            this.handleSubscribeEvents(clientInfo, message.payload.sessionId as string);
+          }
           break;
 
         case WSMessageType.UNSUBSCRIBE_EVENTS:
-          this.handleUnsubscribeEvents(clientInfo, (message.payload as any)?.sessionId);
+          if (message.payload && typeof message.payload === 'object' && 'sessionId' in message.payload) {
+            this.handleUnsubscribeEvents(clientInfo, message.payload.sessionId as string);
+          }
           break;
 
         case WSMessageType.PING:

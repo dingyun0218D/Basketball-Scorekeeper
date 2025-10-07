@@ -48,9 +48,9 @@ jobs:
           script: |
             # 检查并安装Node.js环境
             if ! command -v node &> /dev/null; then
-              echo "📦 安装Node.js..."
-              curl -fsSL https://rpm.nodesource.com/setup_18.x | bash -
-              yum install -y nodejs
+              echo "📦 安装Node.js 18.x..."
+              curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+              apt-get install -y nodejs
             else
               echo "✅ Node.js已安装: $(node -v)"
             fi

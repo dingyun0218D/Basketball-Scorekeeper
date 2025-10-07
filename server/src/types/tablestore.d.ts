@@ -3,6 +3,7 @@
  * 为tablestore模块提供TypeScript类型支持
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 declare module 'tablestore' {
   export class Client {
     constructor(config: {
