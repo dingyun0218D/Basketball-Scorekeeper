@@ -101,9 +101,10 @@ export class TableStoreService implements CollaborativeService {
     // 订阅WebSocket消息
     const unsubscribeWS = wsClient.on(
       WSMessageType.GAME_STATE_UPDATE,
-      (payload: { sessionId: string; gameState: GameState }) => {
-        if (payload.sessionId === sessionId) {
-          callback(payload.gameState);
+      (payload) => {
+        const data = payload as { sessionId: string; gameState: GameState };
+        if (data.sessionId === sessionId) {
+          callback(data.gameState);
         }
       }
     );
@@ -171,10 +172,11 @@ export class TableStoreService implements CollaborativeService {
     // 订阅WebSocket消息
     const unsubscribeWS = wsClient.on(
       WSMessageType.GAME_EVENTS_UPDATE,
-      (payload: { sessionId: string; event: GameEvent }) => {
-        if (payload.sessionId === sessionId) {
+      (payload) => {
+        const data = payload as { sessionId: string; event: GameEvent };
+        if (data.sessionId === sessionId) {
           // 添加新事件到本地缓存
-          localEvents = [payload.event, ...localEvents];
+          localEvents = [data.event, ...localEvents];
           callback([...localEvents]);
         }
       }
