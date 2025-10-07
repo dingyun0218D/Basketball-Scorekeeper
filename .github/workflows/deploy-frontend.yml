@@ -10,6 +10,9 @@ on:
       - 'vite.config.ts'
       - 'package.json'
       - '.github/workflows/deploy-frontend.yml'
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -26,31 +29,52 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: 检出代码
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: 安装依赖
+        run: |
+          npm ci
+          npm install @rollup/rollup-linux-x64-gnu --save-optional || true
 
-      - name: Build frontend
+      - name: 运行代码检查
+        run: npm run lint
+
+      - name: 构建项目
         env:
+          NODE_ENV: production
+          ROLLUP_USE_NODE: true
+          # Firebase 环境变量
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+          # LeanCloud 环境变量
+          VITE_LEANCLOUD_APP_ID: ${{ secrets.VITE_LEANCLOUD_APP_ID }}
+          VITE_LEANCLOUD_APP_KEY: ${{ secrets.VITE_LEANCLOUD_APP_KEY }}
+          VITE_LEANCLOUD_SERVER_URL: ${{ secrets.VITE_LEANCLOUD_SERVER_URL }}
+          # TableStore 环境变量
           VITE_TABLESTORE_API_URL: ${{ secrets.VITE_TABLESTORE_API_URL }}
           VITE_TABLESTORE_WS_URL: ${{ secrets.VITE_TABLESTORE_WS_URL }}
-        run: npm run build
+        run: |
+          npm run build || npm run build:ci
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+      - name: 上传构建产物
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: ./dist
+
+      - name: 设置 GitHub Pages
+        uses: actions/configure-pages@v4
 
   deploy:
     environment:
@@ -60,17 +84,7 @@ jobs:
     needs: build
     
     steps:
-      - name: Deploy to GitHub Pages
+      - name: 部署到 GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2
-
-      - name: Notify deployment status
-        if: always()
-        run: |
-          if [ ${{ job.status }} == 'success' ]; then
-            echo "✅ Frontend deployment successful!"
-            echo "🌐 URL: ${{ steps.deployment.outputs.page_url }}"
-          else
-            echo "❌ Frontend deployment failed!"
-          fi
+        uses: actions/deploy-pages@v4
 
