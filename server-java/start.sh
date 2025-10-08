@@ -3,7 +3,7 @@
 # Basketball Scorekeeper Tunnel Service启动脚本
 
 APP_NAME="tunnel-service"
-APP_JAR="target/${APP_NAME}.jar"
+APP_JAR="${APP_NAME}.jar"
 PID_FILE="/var/run/${APP_NAME}.pid"
 LOG_DIR="logs"
 LOG_FILE="${LOG_DIR}/application.log"
@@ -14,7 +14,8 @@ mkdir -p ${LOG_DIR}
 # 检查JAR文件是否存在
 if [ ! -f "${APP_JAR}" ]; then
     echo "❌ Error: ${APP_JAR} not found!"
-    echo "Please run 'mvn clean package' first"
+    echo "Current directory: $(pwd)"
+    echo "Available files: $(ls -la)"
     exit 1
 fi
 
