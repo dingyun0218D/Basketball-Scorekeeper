@@ -2,7 +2,6 @@ package com.basketball.config;
 
 import com.alicloud.openservices.tablestore.SyncClient;
 import com.alicloud.openservices.tablestore.TunnelClient;
-import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,7 +11,6 @@ import org.springframework.context.annotation.Configuration;
  * 管理TableStore和Tunnel客户端的初始化
  */
 @Configuration
-@Data
 public class TableStoreConfig {
 
     @Value("${tablestore.endpoint}")
@@ -60,6 +58,19 @@ public class TableStoreConfig {
             accessKeySecret,
             instanceName
         );
+    }
+
+    // Getter methods
+    public String getGameSessionsTunnelId() {
+        return gameSessionsTunnelId;
+    }
+
+    public String getGameEventsTunnelId() {
+        return gameEventsTunnelId;
+    }
+
+    public String getNodejsCallbackUrl() {
+        return nodejsCallbackUrl;
     }
 }
 

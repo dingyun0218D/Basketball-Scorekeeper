@@ -7,7 +7,8 @@ import com.alicloud.openservices.tablestore.tunnel.worker.ProcessRecordsInput;
 import com.alicloud.openservices.tablestore.tunnel.worker.TunnelWorker;
 import com.alicloud.openservices.tablestore.tunnel.worker.TunnelWorkerConfig;
 import com.basketball.config.TableStoreConfig;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,8 +20,9 @@ import javax.annotation.PreDestroy;
  * 监听TableStore数据变更并触发回调
  */
 @Service
-@Slf4j
 public class TunnelService {
+
+    private static final Logger log = LoggerFactory.getLogger(TunnelService.class);
 
     @Autowired
     private TunnelClient tunnelClient;
@@ -92,7 +94,7 @@ public class TunnelService {
         String tunnelId = config.getGameSessionsTunnelId();
         
         TunnelWorkerConfig workerConfig = new TunnelWorkerConfig(
-            new SimpleChannelProcessor(gameSessionsProcessor)
+            gameSessionsProcessor
         );
 
         gameSessionsWorker = new TunnelWorker(
@@ -117,7 +119,7 @@ public class TunnelService {
         String tunnelId = config.getGameEventsTunnelId();
         
         TunnelWorkerConfig workerConfig = new TunnelWorkerConfig(
-            new SimpleChannelProcessor(gameEventsProcessor)
+            gameEventsProcessor
         );
 
         gameEventsWorker = new TunnelWorker(
@@ -132,27 +134,6 @@ public class TunnelService {
         } catch (Exception e) {
             log.error("❌ Failed to connect GameEvents Tunnel: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to connect GameEvents Tunnel", e);
-        }
-    }
-
-    /**
-     * 简单的Channel处理器包装
-     */
-    private static class SimpleChannelProcessor implements IChannelProcessor {
-        private final RecordProcessor processor;
-
-        public SimpleChannelProcessor(RecordProcessor processor) {
-            this.processor = processor;
-        }
-
-        @Override
-        public void process(ProcessRecordsInput input) {
-            processor.processRecords(input);
-        }
-
-        @Override
-        public void shutdown() {
-            // 清理资源
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.basketball;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
@@ -11,17 +12,18 @@ import org.springframework.context.annotation.ComponentScan;
  */
 @SpringBootApplication
 @ComponentScan(basePackages = "com.basketball")
-@Slf4j
 public class TunnelApplication {
+
+    private static final Logger log = LoggerFactory.getLogger(TunnelApplication.class);
 
     public static void main(String[] args) {
         try {
             log.info("🚀 Starting Basketball Scorekeeper Tunnel Service...");
-            log.info("=" .repeat(60));
+            log.info("============================================================");
             
             SpringApplication.run(TunnelApplication.class, args);
             
-            log.info("=" .repeat(60));
+            log.info("============================================================");
             log.info("✅ Basketball Scorekeeper Tunnel Service started successfully!");
             
         } catch (Exception e) {

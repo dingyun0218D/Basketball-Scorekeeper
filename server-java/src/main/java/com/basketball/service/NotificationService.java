@@ -3,8 +3,9 @@ package com.basketball.service;
 import com.basketball.config.TableStoreConfig;
 import com.basketball.model.CallbackRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,8 +17,9 @@ import java.util.concurrent.TimeUnit;
  * 负责向Node.js服务发送HTTP回调通知
  */
 @Service
-@Slf4j
 public class NotificationService {
+
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;

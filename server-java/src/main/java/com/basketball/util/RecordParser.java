@@ -1,6 +1,9 @@
 package com.basketball.util;
 
 import com.alicloud.openservices.tablestore.model.Column;
+import com.alicloud.openservices.tablestore.model.ColumnValue;
+import com.alicloud.openservices.tablestore.model.ColumnType;
+import com.alicloud.openservices.tablestore.model.PrimaryKey;
 import com.alicloud.openservices.tablestore.model.PrimaryKeyColumn;
 import com.alicloud.openservices.tablestore.model.RecordColumn;
 
@@ -15,16 +18,16 @@ import java.util.Map;
 public class RecordParser {
 
     /**
-     * 解析主键
+     * 解析主键（从PrimaryKey对象）
      */
-    public static Map<String, Object> parsePrimaryKey(List<PrimaryKeyColumn> primaryKey) {
+    public static Map<String, Object> parsePrimaryKey(PrimaryKey primaryKey) {
         Map<String, Object> result = new HashMap<>();
         
         if (primaryKey == null) {
             return result;
         }
 
-        for (PrimaryKeyColumn column : primaryKey) {
+        for (PrimaryKeyColumn column : primaryKey.getPrimaryKeyColumns()) {
             String name = column.getName();
             Object value = column.getValue().asString();
             result.put(name, value);
@@ -45,7 +48,7 @@ public class RecordParser {
 
         for (RecordColumn column : columns) {
             String name = column.getColumn().getName();
-            Column.ColumnValue value = column.getColumn().getValue();
+            ColumnValue value = column.getColumn().getValue();
             
             // 根据类型转换值
             Object parsedValue = parseColumnValue(value);
@@ -58,20 +61,22 @@ public class RecordParser {
     /**
      * 解析列值
      */
-    private static Object parseColumnValue(Column.ColumnValue value) {
-        if (value.isString()) {
-            return value.asString();
-        } else if (value.isInteger()) {
-            return value.asLong();
-        } else if (value.isDouble()) {
-            return value.asDouble();
-        } else if (value.isBoolean()) {
-            return value.asBoolean();
-        } else if (value.isBinary()) {
-            return value.asBinary();
-        } else {
-            return value.toString();
+    private static Object parseColumnValue(ColumnValue value) {
+        ColumnType type = value.getType();
+        
+        switch (type) {
+            case STRING:
+                return value.asString();
+            case INTEGER:
+                return value.asLong();
+            case DOUBLE:
+                return value.asDouble();
+            case BOOLEAN:
+                return value.asBoolean();
+            case BINARY:
+                return value.asBinary();
+            default:
+                return value.toString();
         }
     }
 }
-

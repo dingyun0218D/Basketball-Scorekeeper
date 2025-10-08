@@ -1,11 +1,11 @@
 package com.basketball.service;
 
 import com.alicloud.openservices.tablestore.model.StreamRecord;
-import com.alicloud.openservices.tablestore.model.tunnel.Record;
-import com.alicloud.openservices.tablestore.model.tunnel.RecordType;
+import com.alicloud.openservices.tablestore.tunnel.worker.IChannelProcessor;
 import com.alicloud.openservices.tablestore.tunnel.worker.ProcessRecordsInput;
 import com.basketball.util.RecordParser;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -13,37 +13,33 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * GameEvents表的记录处理器
+ * GameEvents表的通道处理器
  * 处理游戏事件变更
  */
 @Component
-@Slf4j
-public class GameEventsProcessor implements RecordProcessor {
+public class GameEventsProcessor implements IChannelProcessor {
+
+    private static final Logger log = LoggerFactory.getLogger(GameEventsProcessor.class);
 
     @Autowired
     private NotificationService notificationService;
 
     @Override
-    public void processRecords(ProcessRecordsInput input) {
-        List<Record> records = input.getRecords();
+    public void process(ProcessRecordsInput input) {
+        List<StreamRecord> records = input.getRecords();
         
         log.debug("📦 Processing {} GameEvents records", records.size());
 
-        for (Record record : records) {
+        for (StreamRecord record : records) {
             try {
-                // 只处理数据记录，跳过系统记录
-                if (record.getRecordType() != RecordType.PUT) {
-                    continue;
-                }
-
-                StreamRecord streamRecord = record.getStreamRecord();
-                if (streamRecord == null) {
+                // 只处理PUT类型的记录
+                if (record.getRecordType() != StreamRecord.RecordType.PUT) {
                     continue;
                 }
 
                 // 解析主键获取sessionId和eventId
                 Map<String, Object> primaryKey = RecordParser.parsePrimaryKey(
-                    streamRecord.getPrimaryKey()
+                    record.getPrimaryKey()
                 );
                 String sessionId = (String) primaryKey.get("sessionId");
                 String eventId = (String) primaryKey.get("eventId");
@@ -55,7 +51,7 @@ public class GameEventsProcessor implements RecordProcessor {
 
                 // 解析属性列
                 Map<String, Object> columns = RecordParser.parseColumns(
-                    streamRecord.getColumns()
+                    record.getColumns()
                 );
 
                 // 获取eventData字段
@@ -78,5 +74,9 @@ public class GameEventsProcessor implements RecordProcessor {
             }
         }
     }
-}
 
+    @Override
+    public void shutdown() {
+        log.info("🛑 GameEventsProcessor shutting down");
+    }
+}
