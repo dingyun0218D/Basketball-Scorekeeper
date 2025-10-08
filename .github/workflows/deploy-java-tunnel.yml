@@ -1,0 +1,110 @@
+name: Deploy Java Tunnel Service
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-java-tunnel:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置Java 11环境
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          cache: 'maven'
+
+      - name: Maven构建
+        run: |
+          cd server-java
+          mvn clean package -DskipTests
+          ls -lh target/
+
+      - name: 准备部署文件
+        run: |
+          mkdir -p deploy
+          cp server-java/target/tunnel-service.jar deploy/
+          cp server-java/*.sh deploy/
+          chmod +x deploy/*.sh
+
+      - name: 部署到ECS
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USERNAME }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          source: "deploy/*"
+          target: "/opt/basketball-tunnel/"
+          strip_components: 1
+
+      - name: 配置并启动服务
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USERNAME }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script: |
+            cd /opt/basketball-tunnel
+            
+            # 创建.env文件
+            cat > .env << EOF
+            PORT=8080
+            TABLESTORE_ENDPOINT=${{ secrets.TABLESTORE_ENDPOINT }}
+            TABLESTORE_INSTANCE_NAME=${{ secrets.TABLESTORE_INSTANCE_NAME }}
+            TABLESTORE_ACCESS_KEY_ID=${{ secrets.TABLESTORE_ACCESS_KEY_ID }}
+            TABLESTORE_ACCESS_KEY_SECRET=${{ secrets.TABLESTORE_ACCESS_KEY_SECRET }}
+            TUNNEL_GAME_SESSIONS_ID=${{ secrets.TUNNEL_GAME_SESSIONS_ID }}
+            TUNNEL_GAME_EVENTS_ID=${{ secrets.TUNNEL_GAME_EVENTS_ID }}
+            NODEJS_CALLBACK_URL=http://localhost:3001
+            EOF
+            
+            # 安装Java 11（如果未安装）
+            if ! command -v java &> /dev/null; then
+              echo "📦 安装Java 11..."
+              sudo apt-get update -qq
+              sudo apt-get install -y -qq openjdk-11-jre-headless
+            fi
+            
+            # 检查Java版本
+            java -version
+            
+            # 停止旧服务（如果运行中）
+            if [ -f /var/run/tunnel-service.pid ]; then
+              ./stop.sh || true
+            fi
+            
+            # 启动新服务
+            ./start.sh
+            
+            # 等待服务启动
+            sleep 5
+            
+            # 检查服务状态
+            if [ -f /var/run/tunnel-service.pid ]; then
+              PID=$(cat /var/run/tunnel-service.pid)
+              if ps -p $PID > /dev/null 2>&1; then
+                echo "✅ Java Tunnel Service is running (PID: $PID)"
+                
+                # 测试健康检查
+                curl -f http://localhost:8080/api/health || echo "⚠️ Health check failed"
+              else
+                echo "❌ Service failed to start"
+                cat logs/application.log
+                exit 1
+              fi
+            else
+              echo "❌ PID file not found"
+              cat logs/application.log
+              exit 1
+            fi
+

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { tablestoreClient } from '../services/tablestoreClient';
+import { websocketService } from '../services/websocketService';
 
 const router = Router();
 
@@ -241,6 +242,51 @@ router.get('/generate-session-id', (req: Request, res: Response) => {
     success: true,
     sessionId
   });
+});
+
+/**
+ * Tunnel回调接口（由Java服务调用）
+ * POST /api/tunnel/callback
+ */
+router.post('/tunnel/callback', async (req: Request, res: Response) => {
+  try {
+    const { type, sessionId, data, timestamp } = req.body;
+
+    if (!type || !sessionId || !data) {
+      return res.status(400).json({
+        error: 'Missing required fields: type, sessionId, data'
+      });
+    }
+
+    // 根据类型分发通知
+    if (type === 'gameState') {
+      // 解析gameState JSON
+      const gameState = typeof data === 'string' ? JSON.parse(data) : data;
+      websocketService.broadcastGameStateUpdate(sessionId, gameState);
+      console.log(`📤 Broadcasted gameState update for session: ${sessionId}`);
+    } else if (type === 'gameEvent') {
+      // 解析gameEvent JSON
+      const event = typeof data === 'string' ? JSON.parse(data) : data;
+      websocketService.broadcastGameEventUpdate(sessionId, event);
+      console.log(`📤 Broadcasted gameEvent update for session: ${sessionId}`);
+    } else {
+      return res.status(400).json({
+        error: `Unknown callback type: ${type}`
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Callback processed successfully',
+      timestamp
+    });
+  } catch (error) {
+    console.error('Error processing tunnel callback:', error);
+    res.status(500).json({
+      error: 'Failed to process callback',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
 export default router;

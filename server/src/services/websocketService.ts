@@ -223,7 +223,7 @@ export class WebSocketService {
   /**
    * 广播游戏状态更新
    */
-  private broadcastGameStateUpdate(sessionId: string, gameState: GameState): void {
+  public broadcastGameStateUpdate(sessionId: string, gameState: GameState): void {
     const message: WSMessage = {
       type: WSMessageType.GAME_STATE_UPDATE,
       payload: { sessionId, gameState }
@@ -245,7 +245,7 @@ export class WebSocketService {
   /**
    * 广播游戏事件更新
    */
-  private broadcastGameEventUpdate(sessionId: string, event: GameEvent): void {
+  public broadcastGameEventUpdate(sessionId: string, event: GameEvent): void {
     const message: WSMessage = {
       type: WSMessageType.GAME_EVENTS_UPDATE,
       payload: { sessionId, event }

@@ -30,15 +30,28 @@
 
 ## 🛠️ 技术栈
 
+### 前端
 ```
 React 18 + TypeScript              # 前端框架与类型安全
 Vite                               # 构建工具
 Tailwind CSS                       # 样式框架
-Firebase/LeanCloud/TableStore      # 实时协作后端
-Node.js + Express                  # 后端服务（TableStore）
-WebSocket + Tunnel Service         # 实时推送
 React Context                      # 状态管理
 Lucide React                       # 图标库
+```
+
+### 后端
+```
+Node.js 18 + Express               # REST API服务
+WebSocket                          # 实时通信
+Java 11 + Spring Boot              # Tunnel监听服务
+TypeScript                         # 类型安全
+```
+
+### 协作服务
+```
+Firebase Firestore                 # Google云数据库
+LeanCloud                          # 国内云服务
+阿里云TableStore + Tunnel          # 分布式NoSQL + 实时推送
 ```
 
 ## 🚀 快速开始
@@ -125,27 +138,35 @@ AV.init({
 });
 ```
 
+#### TableStore配置（推荐）
+TableStore使用独立的后端服务，提供最佳性能：
+
+**前端配置** - 在环境变量或构建时配置：
+```bash
+VITE_TABLESTORE_API_URL=http://your-server-ip:3001
+VITE_TABLESTORE_WS_URL=ws://your-server-ip:3001
+```
+
+**后端部署** - 需要部署两个服务：
+1. **Node.js API服务**（端口3001）- 提供REST API和WebSocket
+2. **Java Tunnel服务**（端口8080）- 监听TableStore数据变更
+
 详细配置说明请参考 `docs/` 目录中的相关文档。
 
 ## 📚 文档
 
-项目文档位于 `docs/` 目录：
+详细文档位于 `docs/` 目录，查看 **[文档索引](docs/README.md)**
 
-### 协作服务配置
-- **FIREBASE_SETUP_GUIDE.md** - Firebase配置指南
-- **LEANCLOUD_COLLABORATION_IMPLEMENTATION.md** - LeanCloud协作实现
-- **TABLESTORE_DEPLOYMENT_GUIDE.md** - 阿里云TableStore完整部署指南
-- **TABLESTORE_QUICK_START.md** - TableStore快速开始
-- **COLLABORATION_TEST_GUIDE.md** - 协作功能测试指南
+### 快速导航
+- 🚀 **[快速部署](docs/DEPLOYMENT_QUICK_GUIDE.md)** - 完整部署指南（推荐）
+- 📖 **[项目总览](docs/PROJECT_SUMMARY.md)** - 功能和架构说明
+- 🔧 **[API文档](docs/SERVER_README.md)** - Node.js REST API接口
+- ☕ **[Java服务](docs/JAVA_TUNNEL_SERVICE.md)** - Tunnel监听服务
 
-### 后端服务
-- **SERVER_README.md** - 后端服务文档和API说明
-- **SERVER_ENV_TEMPLATE.md** - 环境变量配置模板
-
-### 项目说明
-- **TABLESTORE_IMPLEMENTATION_SUMMARY.md** - TableStore实现总结
-- **PROJECT_SUMMARY.md** - 详细的项目功能说明
-- 其他技术文档和实现细节
+### 协作服务选择
+- **TableStore** ⭐推荐 - [部署指南](docs/DEPLOYMENT_QUICK_GUIDE.md)
+- **Firebase** - [配置指南](docs/FIREBASE_SETUP_GUIDE.md)
+- **LeanCloud** - [实现说明](docs/LEANCLOUD_COLLABORATION_IMPLEMENTATION.md)
 
 ## 🎯 项目特色
 
