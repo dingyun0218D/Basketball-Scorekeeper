@@ -11,6 +11,14 @@ LOG_FILE="${LOG_DIR}/application.log"
 # 创建日志目录
 mkdir -p ${LOG_DIR}
 
+# 加载环境变量
+if [ -f .env ]; then
+    echo "📦 Loading environment variables from .env..."
+    export $(cat .env | grep -v '^#' | xargs)
+else
+    echo "⚠️ Warning: .env file not found"
+fi
+
 # 检查JAR文件是否存在
 if [ ! -f "${APP_JAR}" ]; then
     echo "❌ Error: ${APP_JAR} not found!"

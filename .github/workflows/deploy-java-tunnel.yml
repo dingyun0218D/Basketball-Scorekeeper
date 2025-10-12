@@ -36,6 +36,7 @@ jobs:
           cp server-java/target/tunnel-service.jar deploy/
           cp server-java/*.sh deploy/
           chmod +x deploy/*.sh
+          ls -lh deploy/
 
       - name: 部署到ECS
         uses: appleboy/scp-action@master
@@ -77,6 +78,11 @@ jobs:
             
             # 检查Java版本
             java -version
+            
+            # 检查环境变量
+            echo "🔍 Checking environment variables..."
+            chmod +x check-env.sh
+            ./check-env.sh || echo "⚠️ Some environment variables may be missing"
             
             # 停止旧服务（如果运行中）
             if [ -f /var/run/tunnel-service.pid ]; then
