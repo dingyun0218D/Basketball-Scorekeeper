@@ -2,7 +2,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { IncomingMessage, Server as HTTPServer } from 'http';
 import { Server as HTTPSServer } from 'https';
 import { WSMessage, WSMessageType, GameState, GameEvent } from '../types';
-import { tunnelWorker } from './tunnelWorker';
+// import { tunnelWorker } from './tunnelWorker'; // 已禁用：使用Java服务处理Tunnel
 
 /**
  * 客户端连接信息
@@ -35,8 +35,8 @@ export class WebSocketService {
       this.handleConnection(ws, request);
     });
 
-    // 注册Tunnel Worker回调
-    this.registerTunnelCallbacks();
+    // 注册Tunnel Worker回调 - 已禁用：使用Java服务通过HTTP回调
+    // this.registerTunnelCallbacks();
 
     // 启动心跳检测
     this.startPingInterval();
@@ -205,19 +205,19 @@ export class WebSocketService {
 
   /**
    * 注册Tunnel Worker回调
+   * 已禁用：使用Java服务通过HTTP回调（/api/tunnel/callback）
    */
   private registerTunnelCallbacks(): void {
-    // 监听游戏状态变更
-    tunnelWorker.onGameStateChange((sessionId: string, gameState: GameState) => {
-      this.broadcastGameStateUpdate(sessionId, gameState);
-    });
+    // 已禁用：Java服务会直接调用 broadcastGameStateUpdate/broadcastGameEventUpdate
+    // tunnelWorker.onGameStateChange((sessionId: string, gameState: GameState) => {
+    //   this.broadcastGameStateUpdate(sessionId, gameState);
+    // });
 
-    // 监听游戏事件变更
-    tunnelWorker.onGameEventChange((sessionId: string, event: GameEvent) => {
-      this.broadcastGameEventUpdate(sessionId, event);
-    });
+    // tunnelWorker.onGameEventChange((sessionId: string, event: GameEvent) => {
+    //   this.broadcastGameEventUpdate(sessionId, event);
+    // });
 
-    console.log('✅ Tunnel callbacks registered');
+    console.log('✅ Tunnel callbacks disabled (using Java service)');
   }
 
   /**

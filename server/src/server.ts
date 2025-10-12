@@ -4,7 +4,7 @@ import compression from 'compression';
 import { createServer } from 'http';
 import { validateConfig, serverConfig } from './config/tablestore';
 import { websocketService } from './services/websocketService';
-import { tunnelWorker } from './services/tunnelWorker';
+// import { tunnelWorker } from './services/tunnelWorker'; // 已禁用：使用Java服务处理Tunnel
 import apiRoutes from './routes/api';
 
 /**
@@ -67,9 +67,9 @@ async function startServer() {
     console.log('🔌 Initializing WebSocket service...');
     websocketService.initialize(server);
 
-    // 启动Tunnel Worker
-    console.log('🚇 Starting Tunnel Worker...');
-    await tunnelWorker.start();
+    // 启动Tunnel Worker - 已禁用：使用Java服务处理Tunnel
+    // console.log('🚇 Starting Tunnel Worker...');
+    // await tunnelWorker.start();
 
     // 启动服务器
     server.listen(serverConfig.port, () => {
@@ -96,8 +96,8 @@ async function startServer() {
       // 关闭WebSocket服务
       websocketService.shutdown();
 
-      // 停止Tunnel Worker
-      await tunnelWorker.stop();
+      // 停止Tunnel Worker - 已禁用：使用Java服务处理Tunnel
+      // await tunnelWorker.stop();
 
       console.log('✅ Server shutdown complete');
       process.exit(0);
