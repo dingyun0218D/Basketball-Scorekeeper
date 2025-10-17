@@ -111,6 +111,7 @@ export class LeanCloudService implements CollaborativeService {
     let isSubscribed = true;
     
     // 轮询实现实时更新（LeanCloud的LiveQuery需要额外配置）
+    // 优化：从2000ms降低到500ms，显著减少延迟
     const pollInterval = setInterval(async () => {
       if (!isSubscribed) return;
       
@@ -136,7 +137,7 @@ export class LeanCloudService implements CollaborativeService {
         console.error('LeanCloud 监听游戏状态失败:', error);
         callback(null);
       }
-    }, 2000); // 每2秒轮询一次
+    }, 500); // 优化：每500毫秒轮询一次，提升响应速度
 
     const unsubscribe = () => {
       isSubscribed = false;
@@ -180,6 +181,7 @@ export class LeanCloudService implements CollaborativeService {
     let isSubscribed = true;
     
     // 轮询实现事件更新
+    // 优化：从3000ms降低到800ms，更快捕获事件更新
     const pollInterval = setInterval(async () => {
       if (!isSubscribed) return;
       
@@ -204,7 +206,7 @@ export class LeanCloudService implements CollaborativeService {
         console.error('LeanCloud 监听游戏事件失败:', error);
         callback([]);
       }
-    }, 3000); // 每3秒轮询一次
+    }, 800); // 优化：每800毫秒轮询一次，减少事件同步延迟
 
     const unsubscribe = () => {
       isSubscribed = false;
