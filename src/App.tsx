@@ -40,8 +40,8 @@ const App: React.FC = () => {
         {/* 应用头部 */}
         <AppHeader
           collaborativeSessionId={collaboration.collaborativeSessionId}
-          homeTeamScore={gameState.homeTeam.score}
-          awayTeamScore={gameState.awayTeam.score}
+          homeTeamScore={gameState.homeTeam?.score ?? 0}
+          awayTeamScore={gameState.awayTeam?.score ?? 0}
           onToggleCollaborativePanel={collaboration.toggleCollaborativePanel}
         />
 
