@@ -38,6 +38,7 @@ export class TableStoreWebSocketClient {
   private shouldReconnect: boolean = true;
   private readonly RECONNECT_INTERVAL = 3000;
   private readonly PING_INTERVAL = 25000;
+  private connectingPromise: Promise<void> | null = null;
 
   /**
    * 连接到WebSocket服务器
@@ -49,46 +50,57 @@ export class TableStoreWebSocketClient {
         return;
       }
 
-      if (this.isConnecting) {
-        reject(new Error('Already connecting'));
+      // 如果正在连接，返回现有的连接Promise
+      if (this.isConnecting && this.connectingPromise) {
+        this.connectingPromise.then(resolve).catch(reject);
         return;
       }
 
       this.isConnecting = true;
+      
+      // 创建连接Promise供其他调用者等待
+      this.connectingPromise = new Promise<void>((resolveConnect, rejectConnect) => {
 
-      try {
-        this.ws = new WebSocket(tablestoreConfig.wsBaseUrl);
+        try {
+          this.ws = new WebSocket(tablestoreConfig.wsBaseUrl);
 
-        this.ws.onopen = () => {
-          console.log('✅ WebSocket connected');
+          this.ws.onopen = () => {
+            console.log('✅ WebSocket connected');
+            this.isConnecting = false;
+            this.connectingPromise = null;
+            this.startPing();
+            resolveConnect();
+          };
+
+          this.ws.onmessage = (event) => {
+            this.handleMessage(event.data);
+          };
+
+          this.ws.onerror = (error) => {
+            console.error('❌ WebSocket error:', error);
+            this.isConnecting = false;
+            this.connectingPromise = null;
+            rejectConnect(error);
+          };
+
+          this.ws.onclose = () => {
+            console.log('❌ WebSocket disconnected');
+            this.isConnecting = false;
+            this.connectingPromise = null;
+            this.stopPing();
+            
+            if (this.shouldReconnect) {
+              this.scheduleReconnect();
+            }
+          };
+        } catch (error) {
           this.isConnecting = false;
-          this.startPing();
-          resolve();
-        };
+          this.connectingPromise = null;
+          rejectConnect(error);
+        }
+      });
 
-        this.ws.onmessage = (event) => {
-          this.handleMessage(event.data);
-        };
-
-        this.ws.onerror = (error) => {
-          console.error('❌ WebSocket error:', error);
-          this.isConnecting = false;
-          reject(error);
-        };
-
-        this.ws.onclose = () => {
-          console.log('❌ WebSocket disconnected');
-          this.isConnecting = false;
-          this.stopPing();
-          
-          if (this.shouldReconnect) {
-            this.scheduleReconnect();
-          }
-        };
-      } catch (error) {
-        this.isConnecting = false;
-        reject(error);
-      }
+      this.connectingPromise.then(resolve).catch(reject);
     });
   }
 

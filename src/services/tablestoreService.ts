@@ -115,8 +115,31 @@ export class TableStoreService implements CollaborativeService {
       payload: { sessionId }
     });
 
-    // 立即获取一次当前状态
-    this.getGameState(sessionId).then(callback).catch(() => callback(null));
+    // 立即获取一次当前状态，带重试机制（解决TableStore写入延迟）
+    const fetchInitialState = async (retries = 3, delay = 500) => {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const state = await this.getGameState(sessionId);
+          if (state) {
+            callback(state);
+            return;
+          }
+        } catch (error) {
+          console.log(`⏳ Retry ${i + 1}/${retries} fetching session ${sessionId}...`);
+        }
+        
+        // 如果不是最后一次重试，等待后再试
+        if (i < retries - 1) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+      
+      // 所有重试都失败，回调null
+      console.warn(`⚠️ Failed to fetch initial state for session ${sessionId} after ${retries} retries`);
+      callback(null);
+    };
+    
+    fetchInitialState();
 
     // 返回取消订阅函数
     return () => {
