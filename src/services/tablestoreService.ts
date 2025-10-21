@@ -95,9 +95,6 @@ export class TableStoreService implements CollaborativeService {
     sessionId: string,
     callback: (gameState: GameState | null) => void
   ): () => void {
-    // 确保WebSocket已连接
-    this.initialize().catch(console.error);
-
     // 订阅WebSocket消息
     const unsubscribeWS = wsClient.on(
       WSMessageType.GAME_STATE_UPDATE,
@@ -109,11 +106,13 @@ export class TableStoreService implements CollaborativeService {
       }
     );
 
-    // 发送订阅请求
-    wsClient.send({
-      type: WSMessageType.SUBSCRIBE_SESSION,
-      payload: { sessionId }
-    });
+    // 确保WebSocket连接后再发送订阅请求
+    this.initialize().then(() => {
+      wsClient.send({
+        type: WSMessageType.SUBSCRIBE_SESSION,
+        payload: { sessionId }
+      });
+    }).catch(console.error);
 
     // 立即获取一次当前状态
     this.getGameState(sessionId).then(callback).catch(() => callback(null));
@@ -163,9 +162,6 @@ export class TableStoreService implements CollaborativeService {
     sessionId: string,
     callback: (events: GameEvent[]) => void
   ): () => void {
-    // 确保WebSocket已连接
-    this.initialize().catch(console.error);
-
     // 本地事件缓存
     let localEvents: GameEvent[] = [];
 
@@ -182,11 +178,13 @@ export class TableStoreService implements CollaborativeService {
       }
     );
 
-    // 发送订阅请求
-    wsClient.send({
-      type: WSMessageType.SUBSCRIBE_EVENTS,
-      payload: { sessionId }
-    });
+    // 确保WebSocket连接后再发送订阅请求
+    this.initialize().then(() => {
+      wsClient.send({
+        type: WSMessageType.SUBSCRIBE_EVENTS,
+        payload: { sessionId }
+      });
+    }).catch(console.error);
 
     // 立即获取一次当前事件列表
     this.getGameEvents(sessionId).then((events) => {
