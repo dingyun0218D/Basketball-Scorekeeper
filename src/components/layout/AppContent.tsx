@@ -94,22 +94,9 @@ export const AppContent: React.FC<AppContentProps> = ({
           return <div className="text-center py-8">游戏状态加载中...</div>;
         }
         
-        // 检查teams是否存在并且数据完整
-        if (!gameState.homeTeam || !gameState.awayTeam || 
-            gameState.homeTeam.score === undefined || 
-            gameState.awayTeam.score === undefined) {
-          console.error('❌ 游戏状态数据不完整', {
-            hasHomeTeam: !!gameState.homeTeam,
-            hasAwayTeam: !!gameState.awayTeam,
-            homeTeamScore: gameState.homeTeam?.score,
-            awayTeamScore: gameState.awayTeam?.score
-          });
-          return (
-            <div className="text-center py-8">
-              <p className="text-red-600 font-semibold">队伍数据加载失败</p>
-              <p className="text-sm text-gray-600 mt-2">请刷新页面或重新创建会话</p>
-            </div>
-          );
+        // 检查teams是否存在
+        if (!gameState.homeTeam || !gameState.awayTeam) {
+          return <div className="text-center py-8">队伍信息加载中...</div>;
         }
         
         return (
@@ -124,8 +111,8 @@ export const AppContent: React.FC<AppContentProps> = ({
                     onTeamNameUpdate={onTeamNameUpdate}
                     side="home"
                   />
-                  <div className="text-5xl font-bold my-2">{gameState.homeTeam.score ?? 0}</div>
-                  <div className="text-sm opacity-75">犯规:{gameState.homeTeam.fouls ?? 0} 暂停:{gameState.homeTeam.timeouts ?? 3}</div>
+                  <div className="text-5xl font-bold my-2">{gameState.homeTeam.score}</div>
+                  <div className="text-sm opacity-75">犯规:{gameState.homeTeam.fouls} 暂停:{gameState.homeTeam.timeouts}</div>
                 </div>
 
                 {/* 中间：计时器和控制 */}
@@ -152,8 +139,8 @@ export const AppContent: React.FC<AppContentProps> = ({
                     onTeamNameUpdate={onTeamNameUpdate}
                     side="away"
                   />
-                  <div className="text-5xl font-bold my-2">{gameState.awayTeam.score ?? 0}</div>
-                  <div className="text-sm opacity-75">犯规:{gameState.awayTeam.fouls ?? 0} 暂停:{gameState.awayTeam.timeouts ?? 3}</div>
+                  <div className="text-5xl font-bold my-2">{gameState.awayTeam.score}</div>
+                  <div className="text-sm opacity-75">犯规:{gameState.awayTeam.fouls} 暂停:{gameState.awayTeam.timeouts}</div>
                 </div>
               </div>
             </div>

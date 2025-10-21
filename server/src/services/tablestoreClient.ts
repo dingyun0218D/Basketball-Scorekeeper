@@ -98,23 +98,8 @@ export class TableStoreClient {
       }
 
       const attributes = this.parseAttributes(result.row);
-      
-      // 安全解析gameState，确保不返回空对象
-      if (!attributes.gameState) {
-        console.error(`❌ Session ${sessionId} has no gameState attribute`);
-        return null;
-      }
-
-      const gameState = JSON.parse(attributes.gameState as string);
+      const gameState = JSON.parse((attributes.gameState as string) || '{}');
       const activeUsers = JSON.parse((attributes.activeUsers as string) || '{}');
-
-      // 验证关键字段是否存在
-      if (!gameState.homeTeam || !gameState.awayTeam) {
-        console.warn(`⚠️ Session ${sessionId} has incomplete gameState`, {
-          hasHomeTeam: !!gameState.homeTeam,
-          hasAwayTeam: !!gameState.awayTeam
-        });
-      }
 
       return {
         ...gameState,

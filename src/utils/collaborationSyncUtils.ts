@@ -64,36 +64,18 @@ export const shouldPushLocalState = (
 };
 
 /**
- * 合并游戏状态，保留会话相关信息并验证数据完整性
+ * 合并游戏状态，保留会话相关信息
  * @param localState 本地状态
  * @param remoteState 远程状态
  * @returns 合并后的状态
  */
 export const mergeGameStates = (localState: GameState, remoteState: GameState): GameState => {
-  // 验证远程状态的关键字段，如果缺失则使用本地状态
-  const merged: GameState = {
+  return {
     ...remoteState,
     // 保持本地的会话相关信息
     sessionId: localState.sessionId || remoteState.sessionId,
     activeUsers: localState.activeUsers || remoteState.activeUsers,
-    // 确保关键字段不会丢失
-    homeTeam: remoteState.homeTeam || localState.homeTeam,
-    awayTeam: remoteState.awayTeam || localState.awayTeam,
-    quarter: remoteState.quarter || localState.quarter || 1,
-    time: remoteState.time || localState.time || '15:00',
-    quarterTime: remoteState.quarterTime || localState.quarterTime || '15:00',
-    events: remoteState.events || localState.events || [],
   };
-
-  // 如果远程状态缺少关键字段，记录警告
-  if (!remoteState.homeTeam || !remoteState.awayTeam) {
-    console.warn('⚠️ 远程状态缺少关键字段，已使用本地状态补充', {
-      hasRemoteHomeTeam: !!remoteState.homeTeam,
-      hasRemoteAwayTeam: !!remoteState.awayTeam
-    });
-  }
-
-  return merged;
 };
 
 /**
