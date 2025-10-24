@@ -29,7 +29,12 @@ router.post('/sessions', async (req: Request, res: Response) => {
       });
     }
 
+    // 创建会话
     await tablestoreClient.createGameSession(gameState, sessionId);
+
+    // 立即通过 WebSocket 广播新创建的状态
+    // 这样订阅者可以立即收到状态，不需要等待数据库同步
+    websocketService.broadcastGameStateUpdate(sessionId, gameState);
 
     res.status(201).json({
       success: true,
@@ -88,7 +93,12 @@ router.put('/sessions/:sessionId', async (req: Request, res: Response) => {
       });
     }
 
+    // 更新数据库
     await tablestoreClient.updateGameState(sessionId, gameState);
+
+    // 立即通过 WebSocket 广播更新
+    // 作为 Tunnel 的补充，确保实时性
+    websocketService.broadcastGameStateUpdate(sessionId, gameState);
 
     res.json({
       success: true,
@@ -162,7 +172,12 @@ router.post('/sessions/:sessionId/events', async (req: Request, res: Response) =
       });
     }
 
+    // 添加事件到数据库
     await tablestoreClient.addGameEvent(sessionId, event);
+
+    // 立即通过 WebSocket 广播事件
+    // 作为 Tunnel 的补充，确保实时性
+    websocketService.broadcastGameEventUpdate(sessionId, event);
 
     res.status(201).json({
       success: true,

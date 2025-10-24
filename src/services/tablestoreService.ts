@@ -343,44 +343,84 @@ export class TableStoreService implements CollaborativeService {
 
   /**
    * 获取游戏状态（私有方法）
+   * 支持重试以处理 TableStore 写入延迟
    */
-  private async getGameState(sessionId: string): Promise<GameState | null> {
-    try {
-      const response = await fetch(
-        `${tablestoreConfig.apiBaseUrl}/sessions/${sessionId}`
-      );
+  private async getGameState(
+    sessionId: string, 
+    retries: number = 3, 
+    delay: number = 500
+  ): Promise<GameState | null> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(
+          `${tablestoreConfig.apiBaseUrl}/sessions/${sessionId}`
+        );
 
-      if (!response.ok) {
+        if (response.ok) {
+          const data = await response.json();
+          if (data.gameState) {
+            return data.gameState;
+          }
+        }
+
+        // 如果是404且还有重试次数，等待后重试
+        if (response.status === 404 && attempt < retries) {
+          console.log(`⏳ 会话 ${sessionId} 暂未就绪，${delay}ms 后重试... (${attempt + 1}/${retries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        return null;
+      } catch (error) {
+        if (attempt < retries) {
+          console.log(`⚠️ 获取游戏状态失败，${delay}ms 后重试... (${attempt + 1}/${retries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        console.error('❌ Error getting game state:', error);
         return null;
       }
-
-      const data = await response.json();
-      return data.gameState || null;
-    } catch (error) {
-      console.error('❌ Error getting game state:', error);
-      return null;
     }
+    return null;
   }
 
   /**
    * 获取游戏事件列表（私有方法）
+   * 支持重试以处理 TableStore 延迟
    */
-  private async getGameEvents(sessionId: string): Promise<GameEvent[]> {
-    try {
-      const response = await fetch(
-        `${tablestoreConfig.apiBaseUrl}/sessions/${sessionId}/events?limit=100`
-      );
+  private async getGameEvents(
+    sessionId: string,
+    retries: number = 2,
+    delay: number = 300
+  ): Promise<GameEvent[]> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(
+          `${tablestoreConfig.apiBaseUrl}/sessions/${sessionId}/events?limit=100`
+        );
 
-      if (!response.ok) {
+        if (response.ok) {
+          const data = await response.json();
+          return data.events || [];
+        }
+
+        // 如果失败且还有重试次数，等待后重试
+        if (!response.ok && attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        return [];
+      } catch (error) {
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        console.error('❌ Error getting game events:', error);
         return [];
       }
-
-      const data = await response.json();
-      return data.events || [];
-    } catch (error) {
-      console.error('❌ Error getting game events:', error);
-      return [];
     }
+    return [];
   }
 }
 
