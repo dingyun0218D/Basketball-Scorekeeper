@@ -1,7 +1,177 @@
 import { CollaborativeService } from '../types';
-import type { GameState, GameEvent } from '../types';
+import type { GameState, GameEvent, Team, Player } from '../types';
 import { tablestoreConfig } from '../config/tablestore';
 import { wsClient, WSMessageType } from './tablestoreWebSocketClient';
+
+/**
+ * 创建默认球员数据
+ */
+const createDefaultPlayer = (id: string, name: string, number: number): Player => ({
+  id,
+  name,
+  number,
+  position: '',
+  points: 0,
+  rebounds: 0,
+  assists: 0,
+  steals: 0,
+  blocks: 0,
+  fouls: 0,
+  turnovers: 0,
+  fieldGoalsMade: 0,
+  fieldGoalsAttempted: 0,
+  threePointersMade: 0,
+  threePointersAttempted: 0,
+  freeThrowsMade: 0,
+  freeThrowsAttempted: 0,
+  isOnCourt: false,
+  plusMinus: 0,
+  timeOnCourt: 0
+});
+
+/**
+ * 创建默认队伍数据
+ */
+const createDefaultTeam = (id: string, name: string, color: string): Team => ({
+  id,
+  name,
+  score: 0,
+  fouls: 0,
+  timeouts: 3,
+  players: [],
+  color
+});
+
+/**
+ * 验证并修复游戏状态
+ * 确保所有必需字段都存在且类型正确
+ */
+const validateAndFixGameState = (state: GameState | null): GameState | null => {
+  if (!state) {
+    console.warn('⚠️ 游戏状态为空');
+    return null;
+  }
+
+  try {
+    // 深拷贝，避免修改原对象
+    const fixedState: GameState = { ...state };
+    let hasChanges = false;
+
+    // 修复缺失的基本字段
+    if (!fixedState.id) {
+      fixedState.id = `game_${Date.now()}`;
+      hasChanges = true;
+      console.warn('⚠️ 修复缺失的游戏ID');
+    }
+
+    // 修复主队数据
+    if (!fixedState.homeTeam || typeof fixedState.homeTeam.score !== 'number') {
+      const teamName = fixedState.homeTeam?.name || '主队';
+      const teamId = fixedState.homeTeam?.id || 'home';
+      const teamColor = fixedState.homeTeam?.color || '#ef4444';
+      fixedState.homeTeam = createDefaultTeam(teamId, teamName, teamColor);
+      
+      // 尝试恢复原有的球员数据
+      if (state.homeTeam?.players && Array.isArray(state.homeTeam.players)) {
+        fixedState.homeTeam.players = state.homeTeam.players;
+      }
+      
+      hasChanges = true;
+      console.warn('⚠️ 修复缺失的主队数据');
+    } else {
+      // 确保球员数组存在
+      if (!Array.isArray(fixedState.homeTeam.players)) {
+        fixedState.homeTeam.players = [];
+        hasChanges = true;
+      }
+    }
+
+    // 修复客队数据
+    if (!fixedState.awayTeam || typeof fixedState.awayTeam.score !== 'number') {
+      const teamName = fixedState.awayTeam?.name || '客队';
+      const teamId = fixedState.awayTeam?.id || 'away';
+      const teamColor = fixedState.awayTeam?.color || '#3b82f6';
+      fixedState.awayTeam = createDefaultTeam(teamId, teamName, teamColor);
+      
+      // 尝试恢复原有的球员数据
+      if (state.awayTeam?.players && Array.isArray(state.awayTeam.players)) {
+        fixedState.awayTeam.players = state.awayTeam.players;
+      }
+      
+      hasChanges = true;
+      console.warn('⚠️ 修复缺失的客队数据');
+    } else {
+      // 确保球员数组存在
+      if (!Array.isArray(fixedState.awayTeam.players)) {
+        fixedState.awayTeam.players = [];
+        hasChanges = true;
+      }
+    }
+
+    // 修复比赛进度相关字段
+    if (typeof fixedState.quarter !== 'number' || fixedState.quarter < 1) {
+      fixedState.quarter = 1;
+      hasChanges = true;
+      console.warn('⚠️ 修复缺失的节数');
+    }
+
+    if (typeof fixedState.time !== 'string') {
+      fixedState.time = '12:00';
+      hasChanges = true;
+      console.warn('⚠️ 修复缺失的比赛时间');
+    }
+
+    if (typeof fixedState.quarterTime !== 'string') {
+      fixedState.quarterTime = '12:00';
+      hasChanges = true;
+      console.warn('⚠️ 修复缺失的单节时间设置');
+    }
+
+    if (typeof fixedState.isRunning !== 'boolean') {
+      fixedState.isRunning = false;
+      hasChanges = true;
+      console.warn('⚠️ 修复缺失的运行状态');
+    }
+
+    if (typeof fixedState.isPaused !== 'boolean') {
+      fixedState.isPaused = false;
+      hasChanges = true;
+      console.warn('⚠️ 修复缺失的暂停状态');
+    }
+
+    // 修复事件数组
+    if (!Array.isArray(fixedState.events)) {
+      fixedState.events = [];
+      hasChanges = true;
+      console.warn('⚠️ 修复缺失的事件数组');
+    }
+
+    // 修复时间戳
+    if (!fixedState.createdAt) {
+      fixedState.createdAt = Date.now();
+      hasChanges = true;
+    }
+
+    if (!fixedState.updatedAt) {
+      fixedState.updatedAt = Date.now();
+      hasChanges = true;
+    }
+
+    // 如果有修改，记录日志
+    if (hasChanges) {
+      console.log('✅ 游戏状态已自动修复:', {
+        sessionId: fixedState.sessionId,
+        homeTeam: fixedState.homeTeam.name,
+        awayTeam: fixedState.awayTeam.name
+      });
+    }
+
+    return fixedState;
+  } catch (error) {
+    console.error('❌ 无法修复游戏状态:', error, state);
+    return null;
+  }
+};
 
 /**
  * TableStore协同服务
@@ -9,23 +179,35 @@ import { wsClient, WSMessageType } from './tablestoreWebSocketClient';
  */
 export class TableStoreService implements CollaborativeService {
   private isInitialized: boolean = false;
+  private initPromise: Promise<void> | null = null;
 
   /**
-   * 初始化服务
+   * 初始化服务（支持并发调用）
    */
   private async initialize(): Promise<void> {
     if (this.isInitialized) {
       return;
     }
 
-    try {
-      await wsClient.connect();
-      this.isInitialized = true;
-      console.log('✅ TableStore Service initialized');
-    } catch (error) {
-      console.error('❌ Failed to initialize TableStore Service:', error);
-      throw error;
+    // 如果正在初始化，返回现有的 Promise，避免重复连接
+    if (this.initPromise) {
+      return this.initPromise;
     }
+
+    // 创建新的初始化 Promise
+    this.initPromise = wsClient.connect()
+      .then(() => {
+        this.isInitialized = true;
+        this.initPromise = null;
+        console.log('✅ TableStore Service initialized');
+      })
+      .catch((error) => {
+        this.initPromise = null;
+        console.error('❌ Failed to initialize TableStore Service:', error);
+        throw error;
+      });
+
+    return this.initPromise;
   }
 
   /**
@@ -95,35 +277,49 @@ export class TableStoreService implements CollaborativeService {
     sessionId: string,
     callback: (gameState: GameState | null) => void
   ): () => void {
-    // 确保WebSocket已连接
-    this.initialize().catch(console.error);
-
     // 订阅WebSocket消息
     const unsubscribeWS = wsClient.on(
       WSMessageType.GAME_STATE_UPDATE,
       (payload) => {
         const data = payload as { sessionId: string; gameState: GameState };
         if (data.sessionId === sessionId) {
-          callback(data.gameState);
+          // 验证并修复游戏状态
+          const validState = validateAndFixGameState(data.gameState);
+          if (validState) {
+            callback(validState);
+          } else {
+            console.error('❌ 收到无效的游戏状态，已忽略', {
+              sessionId: data.sessionId,
+              rawData: data.gameState
+            });
+            // 仍然调用回调，但传入 null
+            callback(null);
+          }
         }
       }
     );
 
-    // 发送订阅请求
-    wsClient.send({
-      type: WSMessageType.SUBSCRIBE_SESSION,
-      payload: { sessionId }
-    });
+    // 等待连接成功后再发送订阅请求
+    this.initialize()
+      .then(() => {
+        wsClient.send({
+          type: WSMessageType.SUBSCRIBE_SESSION,
+          payload: { sessionId }
+        });
+      })
+      .catch(console.error);
 
-    // 立即获取一次当前状态
+    // 立即获取一次当前状态（已包含验证）
     this.getGameState(sessionId).then(callback).catch(() => callback(null));
 
     // 返回取消订阅函数
     return () => {
-      wsClient.send({
-        type: WSMessageType.UNSUBSCRIBE_SESSION,
-        payload: { sessionId }
-      });
+      if (wsClient.isConnected()) {
+        wsClient.send({
+          type: WSMessageType.UNSUBSCRIBE_SESSION,
+          payload: { sessionId }
+        });
+      }
       unsubscribeWS();
     };
   }
@@ -163,9 +359,6 @@ export class TableStoreService implements CollaborativeService {
     sessionId: string,
     callback: (events: GameEvent[]) => void
   ): () => void {
-    // 确保WebSocket已连接
-    this.initialize().catch(console.error);
-
     // 本地事件缓存
     let localEvents: GameEvent[] = [];
 
@@ -182,11 +375,15 @@ export class TableStoreService implements CollaborativeService {
       }
     );
 
-    // 发送订阅请求
-    wsClient.send({
-      type: WSMessageType.SUBSCRIBE_EVENTS,
-      payload: { sessionId }
-    });
+    // 等待连接成功后再发送订阅请求
+    this.initialize()
+      .then(() => {
+        wsClient.send({
+          type: WSMessageType.SUBSCRIBE_EVENTS,
+          payload: { sessionId }
+        });
+      })
+      .catch(console.error);
 
     // 立即获取一次当前事件列表
     this.getGameEvents(sessionId).then((events) => {
@@ -196,10 +393,12 @@ export class TableStoreService implements CollaborativeService {
 
     // 返回取消订阅函数
     return () => {
-      wsClient.send({
-        type: WSMessageType.UNSUBSCRIBE_EVENTS,
-        payload: { sessionId }
-      });
+      if (wsClient.isConnected()) {
+        wsClient.send({
+          type: WSMessageType.UNSUBSCRIBE_EVENTS,
+          payload: { sessionId }
+        });
+      }
       unsubscribeWS();
     };
   }
@@ -283,6 +482,41 @@ export class TableStoreService implements CollaborativeService {
   }
 
   /**
+   * 修复并更新损坏的游戏状态（手动修复工具）
+   * 可用于修复远程数据库中的损坏数据
+   */
+  async repairGameSession(sessionId: string): Promise<boolean> {
+    try {
+      console.log(`🔧 开始修复会话: ${sessionId}`);
+      
+      // 获取当前状态
+      const currentState = await this.getGameState(sessionId);
+      
+      if (!currentState) {
+        console.error('❌ 无法获取游戏状态，修复失败');
+        return false;
+      }
+
+      // 验证并修复
+      const fixedState = validateAndFixGameState(currentState);
+      
+      if (!fixedState) {
+        console.error('❌ 无法修复游戏状态');
+        return false;
+      }
+
+      // 更新到远程
+      await this.updateGameState(sessionId, fixedState);
+      
+      console.log(`✅ 会话修复完成: ${sessionId}`);
+      return true;
+    } catch (error) {
+      console.error('❌ 修复会话失败:', error);
+      return false;
+    }
+  }
+
+  /**
    * 获取游戏状态（私有方法）
    */
   private async getGameState(sessionId: string): Promise<GameState | null> {
@@ -296,7 +530,21 @@ export class TableStoreService implements CollaborativeService {
       }
 
       const data = await response.json();
-      return data.gameState || null;
+      const rawState = data.gameState || null;
+      
+      // 验证并修复游戏状态
+      if (rawState) {
+        const validState = validateAndFixGameState(rawState);
+        if (!validState) {
+          console.error('❌ 获取到无效的游戏状态', {
+            sessionId,
+            rawData: rawState
+          });
+        }
+        return validState;
+      }
+      
+      return null;
     } catch (error) {
       console.error('❌ Error getting game state:', error);
       return null;
