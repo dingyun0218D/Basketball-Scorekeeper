@@ -70,15 +70,6 @@ export const shouldPushLocalState = (
  * @returns 合并后的状态
  */
 export const mergeGameStates = (localState: GameState, remoteState: GameState): GameState => {
-  // 验证远程状态的必要字段
-  if (!remoteState.homeTeam || !remoteState.awayTeam) {
-    console.warn('[协作同步] 远程状态数据不完整，跳过合并', {
-      hasHomeTeam: !!remoteState.homeTeam,
-      hasAwayTeam: !!remoteState.awayTeam
-    });
-    return localState; // 保留本地状态
-  }
-
   return {
     ...remoteState,
     // 保持本地的会话相关信息

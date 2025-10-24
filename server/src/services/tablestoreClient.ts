@@ -56,14 +56,16 @@ export class TableStoreClient {
    * 更新游戏状态
    */
   async updateGameState(sessionId: string, gameState: GameState): Promise<void> {
+    const { activeUsers, ...stateData } = gameState;
+
     const params = {
       tableName: this.tableGameSessions,
       condition: new TableStore.Condition(TableStore.RowExistenceExpectation.EXPECT_EXIST, null),
       primaryKey: [{ sessionId }],
       updateOfAttributeColumns: [
         { PUT: [
-          { gameState: JSON.stringify(gameState) }, // 存储完整的游戏状态
-          { activeUsers: JSON.stringify(gameState.activeUsers || {}) },
+          { gameState: JSON.stringify(stateData) },
+          { activeUsers: JSON.stringify(activeUsers || {}) },
           { updatedAt: Date.now() },
           { lastActiveAt: Date.now() }
         ]}

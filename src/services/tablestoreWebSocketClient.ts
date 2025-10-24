@@ -35,7 +35,6 @@ export class TableStoreWebSocketClient {
   private pingTimer: NodeJS.Timeout | null = null;
   private messageHandlers: Map<WSMessageType, Set<(payload: unknown) => void>> = new Map();
   private isConnecting: boolean = false;
-  private connectPromise: Promise<void> | null = null;
   private shouldReconnect: boolean = true;
   private readonly RECONNECT_INTERVAL = 3000;
   private readonly PING_INTERVAL = 25000;
@@ -44,18 +43,17 @@ export class TableStoreWebSocketClient {
    * 连接到WebSocket服务器
    */
   connect(): Promise<void> {
-    // 如果已经连接，直接返回
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      return Promise.resolve();
-    }
+    return new Promise((resolve, reject) => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        resolve();
+        return;
+      }
 
-    // 如果正在连接，返回同一个Promise
-    if (this.connectPromise) {
-      return this.connectPromise;
-    }
+      if (this.isConnecting) {
+        reject(new Error('Already connecting'));
+        return;
+      }
 
-    // 创建新的连接Promise
-    this.connectPromise = new Promise((resolve, reject) => {
       this.isConnecting = true;
 
       try {
@@ -64,7 +62,6 @@ export class TableStoreWebSocketClient {
         this.ws.onopen = () => {
           console.log('✅ WebSocket connected');
           this.isConnecting = false;
-          this.connectPromise = null;
           this.startPing();
           resolve();
         };
@@ -76,14 +73,12 @@ export class TableStoreWebSocketClient {
         this.ws.onerror = (error) => {
           console.error('❌ WebSocket error:', error);
           this.isConnecting = false;
-          this.connectPromise = null;
           reject(error);
         };
 
         this.ws.onclose = () => {
           console.log('❌ WebSocket disconnected');
           this.isConnecting = false;
-          this.connectPromise = null;
           this.stopPing();
           
           if (this.shouldReconnect) {
@@ -92,12 +87,9 @@ export class TableStoreWebSocketClient {
         };
       } catch (error) {
         this.isConnecting = false;
-        this.connectPromise = null;
         reject(error);
       }
     });
-
-    return this.connectPromise;
   }
 
   /**
