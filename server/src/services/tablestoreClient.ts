@@ -93,11 +93,19 @@ export class TableStoreClient {
     try {
       const result = await this.client.getRow(params);
       
+      console.log('🔍 [DEBUG] getGameState called for sessionId:', sessionId);
+      console.log('🔍 [DEBUG] Raw result:', JSON.stringify(result, null, 2));
+      
       if (!result.row || result.row.length === 0) {
+        console.log('⚠️ [DEBUG] No row found for sessionId:', sessionId);
         return null;
       }
 
+      console.log('🔍 [DEBUG] result.row structure:', result.row);
+      
       const attributes = this.parseAttributes(result.row);
+      console.log('🔍 [DEBUG] Parsed attributes:', attributes);
+      
       const gameState = JSON.parse((attributes.gameState as string) || '{}');
       const activeUsers = JSON.parse((attributes.activeUsers as string) || '{}');
 
@@ -109,6 +117,7 @@ export class TableStoreClient {
       };
     } catch (error) {
       console.error('❌ Error getting game state:', error);
+      console.error('❌ Error details:', error);
       throw error;
     }
   }
@@ -257,16 +266,40 @@ export class TableStoreClient {
   private parseAttributes(row: unknown[]): Record<string, unknown> {
     const attributes: Record<string, unknown> = {};
     
+    console.log('🔍 [DEBUG] parseAttributes input:', row);
+    console.log('🔍 [DEBUG] parseAttributes row length:', row.length);
+    
     if (row && row.length > 0) {
-      // 跳过主键部分，从属性列开始解析
-      for (const item of row) {
-        if (item && typeof item === 'object' && !Array.isArray(item)) {
-          const key = Object.keys(item as Record<string, unknown>)[0];
-          attributes[key] = (item as Record<string, unknown>)[key];
+      // TableStore返回的row数组格式：
+      // [主键对象数组, 属性对象数组]
+      // 例如: [[{sessionId: 'XXX'}], [{gameState: '...'}, {activeUsers: '...'}, ...]]
+      
+      // 如果row是两个元素的数组，第一个是主键，第二个是属性
+      if (row.length === 2 && Array.isArray(row[0]) && Array.isArray(row[1])) {
+        console.log('🔍 [DEBUG] Standard format: [primaryKeys, attributes]');
+        const attributeColumns = row[1] as unknown[];
+        for (const item of attributeColumns) {
+          if (item && typeof item === 'object' && !Array.isArray(item)) {
+            const key = Object.keys(item as Record<string, unknown>)[0];
+            attributes[key] = (item as Record<string, unknown>)[key];
+          }
+        }
+      } else {
+        // 备用解析：尝试直接解析整个数组
+        console.log('🔍 [DEBUG] Alternative format: parsing all items');
+        for (const item of row) {
+          if (item && typeof item === 'object' && !Array.isArray(item)) {
+            const key = Object.keys(item as Record<string, unknown>)[0];
+            // 跳过主键字段（sessionId, eventId等）
+            if (key !== 'sessionId' && key !== 'eventId') {
+              attributes[key] = (item as Record<string, unknown>)[key];
+            }
+          }
         }
       }
     }
 
+    console.log('🔍 [DEBUG] parseAttributes output:', attributes);
     return attributes;
   }
 
