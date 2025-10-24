@@ -106,15 +106,34 @@ export class TableStoreClient {
       const attributes = this.parseAttributes(result.row);
       console.log('🔍 [DEBUG] Parsed attributes:', attributes);
       
-      const gameState = JSON.parse((attributes.gameState as string) || '{}');
-      const activeUsers = JSON.parse((attributes.activeUsers as string) || '{}');
+      // 检查是否有有效的 gameState 数据
+      if (!attributes.gameState || typeof attributes.gameState !== 'string') {
+        console.log('⚠️ [DEBUG] No valid gameState found');
+        return null;
+      }
 
-      return {
-        ...gameState,
-        sessionId,
-        activeUsers,
-        updatedAt: attributes.updatedAt || Date.now()
-      };
+      try {
+        const gameState = JSON.parse(attributes.gameState as string);
+        const activeUsers = attributes.activeUsers 
+          ? JSON.parse(attributes.activeUsers as string) 
+          : {};
+
+        // 验证基本数据结构
+        if (!gameState || typeof gameState !== 'object') {
+          console.log('⚠️ [DEBUG] Invalid gameState structure');
+          return null;
+        }
+
+        return {
+          ...gameState,
+          sessionId,
+          activeUsers,
+          updatedAt: attributes.updatedAt || Date.now()
+        };
+      } catch (parseError) {
+        console.error('❌ Error parsing gameState JSON:', parseError);
+        return null;
+      }
     } catch (error) {
       console.error('❌ Error getting game state:', error);
       console.error('❌ Error details:', error);
@@ -177,14 +196,30 @@ export class TableStoreClient {
 
       if (result.rows) {
         for (const row of result.rows) {
-          const attributes = this.parseAttributes(row);
-          const eventData = JSON.parse((attributes.eventData as string) || '{}');
-          
-          events.push({
-            ...eventData,
-            timestamp: attributes.timestamp || Date.now(),
-            sessionId
-          });
+          try {
+            const attributes = this.parseAttributes(row);
+            
+            // 检查是否有有效的事件数据
+            if (!attributes.eventData || typeof attributes.eventData !== 'string') {
+              console.warn('⚠️ Skipping invalid event data');
+              continue;
+            }
+
+            const eventData = JSON.parse(attributes.eventData as string);
+            
+            // 验证事件数据结构
+            if (eventData && typeof eventData === 'object') {
+              events.push({
+                ...eventData,
+                timestamp: attributes.timestamp || Date.now(),
+                sessionId
+              });
+            }
+          } catch (parseError) {
+            console.error('❌ Error parsing event data:', parseError);
+            // 跳过无效事件，继续处理其他事件
+            continue;
+          }
         }
       }
 
