@@ -1,33 +1,7 @@
 import { CollaborativeService } from '../types';
-import type { GameState, GameEvent, Team, Player } from '../types';
+import type { GameState, GameEvent, Team } from '../types';
 import { tablestoreConfig } from '../config/tablestore';
 import { wsClient, WSMessageType } from './tablestoreWebSocketClient';
-
-/**
- * 创建默认球员数据
- */
-const createDefaultPlayer = (id: string, name: string, number: number): Player => ({
-  id,
-  name,
-  number,
-  position: '',
-  points: 0,
-  rebounds: 0,
-  assists: 0,
-  steals: 0,
-  blocks: 0,
-  fouls: 0,
-  turnovers: 0,
-  fieldGoalsMade: 0,
-  fieldGoalsAttempted: 0,
-  threePointersMade: 0,
-  threePointersAttempted: 0,
-  freeThrowsMade: 0,
-  freeThrowsAttempted: 0,
-  isOnCourt: false,
-  plusMinus: 0,
-  timeOnCourt: 0
-});
 
 /**
  * 创建默认队伍数据
